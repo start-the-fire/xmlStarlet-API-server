@@ -1,0 +1,21 @@
+{
+  "version": "1.1.0",
+  "changelog": [
+    {
+      "version": "1.1.0",
+      "date": "2025-03-27",
+      "changes": [
+        "Adding version changelog",
+        "Cleaning up the code results"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2025-03-27",
+      "changes": [
+        "Initial release",
+        "Building foundation"
+      ]
+    }
+  ]
+}

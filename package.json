@@ -4,7 +4,8 @@
   "description": "xmlStarlet in a docker container which can be requested via API to return the dedicated values",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "update-version": "node scripts/updateVersion.js"
   },
   "repository": {
     "type": "git",

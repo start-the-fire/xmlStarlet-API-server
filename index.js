@@ -1,37 +1,50 @@
 const express = require('express');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const app = express();
 
-// Middleware to parse JSON request bodies
 app.use(express.json());
 
-// POST endpoint to extract XML data using xmlStarlet
 app.post('/extract', (req, res) => {
   const { filePath, xpath } = req.body;
 
-  // Validate inputs to avoid security issues in production.
-  if (!filePath || !xpath) {
-    return res.status(400).json({ error: 'filePath and xpath are required.' });
+  // Basic validation for filePath (adjust regex based on your directory structure)
+  const filePathRegex = /^\/app\/xmlfiles\/[\w\-\/.]+\.xml$/;
+  if (!filePath || !filePathRegex.test(filePath)) {
+    return res.status(400).json({ error: 'Invalid file path format.' });
   }
 
-  // Construct the command
-  const command = `xmlstarlet sel -t -v "${xpath}" "${filePath}"`;
+  // Validate XPath length
+  if (!xpath || typeof xpath !== 'string' || xpath.length > 200) {
+    return res.status(400).json({ error: 'Invalid XPath expression.' });
+  }
 
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      console.error('Command execution error:', error);
-      return res.status(500).json({ error: error.message });
+  // Use spawn to avoid shell injection risks
+  const args = ['sel', '-t', '-v', xpath, filePath];
+  const child = spawn('xmlstarlet', args);
+
+  let output = '';
+  let errorOutput = '';
+
+  child.stdout.on('data', (data) => {
+    output += data;
+  });
+
+  child.stderr.on('data', (data) => {
+    errorOutput += data;
+  });
+
+  child.on('close', (code) => {
+    if (code !== 0) {
+      console.error(`xmlstarlet exited with code ${code}: ${errorOutput}`);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
-    if (stderr) {
-      console.error('Command stderr:', stderr);
-      return res.status(500).json({ error: stderr });
-    }
-    res.json({ result: stdout.trim() });
+    const resultJson = JSON.stringify({ result: stdout }) + "\n";
+    res.setHeader('Content-Type', 'application/json');
+    res.send(resultJson);
   });
 });
 
-// Start the server on port 3000 or the port provided in the environment
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
