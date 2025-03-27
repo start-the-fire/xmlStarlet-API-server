@@ -1,6 +1,15 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "changelog": [
+    {
+      "version": "1.2.0",
+      "date": "2025-03-27",
+      "changes": [
+        "Reworked responses from the API endpoint to return proper json responses",
+        "Implemented various xmlStarlet commands to parse xml files",
+        "Created swagger documentation for the API endpoint"
+      ]
+    },
     {
       "version": "1.1.0",
       "date": "2025-03-27",
