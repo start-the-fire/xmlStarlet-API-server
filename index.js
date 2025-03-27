@@ -17,7 +17,7 @@ app.post('/extract', (req, res) => {
   const { filePath, xpath } = req.body;
 
   // Basic validation for filePath (adjust regex based on your directory structure)
-  const filePathRegex = /^\/app\/xmlfiles\/[\w\-\/.]+\.xml$/;
+  const filePathRegex = /^\/(?:app\/xmlfiles|Volumes)\/[\w\-\/.]+\.xml$/;
   if (!filePath || !filePathRegex.test(filePath)) {
     return res.status(400).json({ error: 'Invalid file path format.' });
   }
