@@ -1,0 +1,23 @@
+{
+  "name": "xmlstarlet-api-server",
+  "version": "1.0.0",
+  "description": "xmlStarlet in a docker container which can be requested via API to return the dedicated values",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/start-the-fire/xmlStarlet-API-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/start-the-fire/xmlStarlet-API-server/issues"
+  },
+  "homepage": "https://github.com/start-the-fire/xmlStarlet-API-server#readme",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
