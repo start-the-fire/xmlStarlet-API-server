@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const { spawn } = require('child_process');
 const YAML = require('yamljs');
@@ -12,6 +13,17 @@ const swaggerDocument = YAML.load('./swagger.yaml');
 
 // Serve Swagger UI at /api
 app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// Define a directory for downloads (internal to the container)
+const DOWNLOAD_DIR = '/app/downloads';
+// Ensure the downloads directory exists
+if (!fs.existsSync(DOWNLOAD_DIR)) {
+  fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
+  console.log(`Created downloads directory: ${DOWNLOAD_DIR}`);
+}
+
+// Serve files from the downloads directory via /download endpoint
+app.use('/download', express.static(DOWNLOAD_DIR));
 
 /**
  * Helper function to transform an incoming file path.
@@ -73,14 +85,17 @@ app.post('/extract', (req, res) => {
   let errorOutput = '';
 
   child.stdout.on('data', (data) => {
+    console.log("Extraction stdout data:", data.toString());
     output += data;
   });
 
   child.stderr.on('data', (data) => {
+    console.log("Extraction stderr data:", data.toString());
     errorOutput += data;
   });
 
   child.on('close', (code) => {
+    console.log("Child process closed with code:", code);
     if (code !== 0) {
       console.error(`xmlstarlet exited with code ${code}: ${errorOutput}`);
       return res.status(500).json({ error: 'Internal Server Error' });
@@ -183,13 +198,13 @@ app.post('/transform', (req, res) => {
   });
 });
 
-// /format endpoint
+// /format endpoint with download link functionality
 app.post('/format', (req, res) => {
   console.log("=== /format endpoint called ===");
   console.log("Request body:", req.body);
   let { filePath, saveTo, logToConsole } = req.body;
   
-  // Ensure logToConsole is a boolean (defaulting to false)
+  // Ensure logToConsole is a boolean (default false)
   logToConsole = logToConsole === true;
   console.log("logToConsole is set to:", logToConsole);
 
@@ -208,12 +223,17 @@ app.post('/format', (req, res) => {
     return res.status(400).json({ error: 'Source file does not exist.' });
   }
 
-  // Determine if saveTo was provided and is non-empty; if so, transform it.
-  let saveToProvided = false;
+  // Determine if saveTo was provided and is non-empty; if so, create a download file
+  let createDownload = false;
+  let downloadFilePath = '';
+  let downloadFileName = '';
   if (saveTo && saveTo.trim() !== '') {
-    saveTo = transformPath(saveTo);
-    console.log("Transformed saveTo path:", saveTo);
-    saveToProvided = true;
+    // Instead of saving at the provided absolute path, we generate an internal file name.
+    // For example, use the basename of the provided saveTo value.
+    downloadFileName = path.basename(saveTo);
+    downloadFilePath = path.join(DOWNLOAD_DIR, downloadFileName);
+    console.log("Download file will be saved as:", downloadFilePath);
+    createDownload = true;
   }
 
   // Use spawn to run the xmlstarlet formatting (pretty-printing) command
@@ -225,7 +245,6 @@ app.post('/format', (req, res) => {
   let errorOutput = '';
 
   child.stdout.on('data', (data) => {
-    // Log stdout data only if logToConsole is enabled
     if (logToConsole) {
       console.log("Formatting stdout data:", data.toString());
     }
@@ -249,20 +268,24 @@ app.post('/format', (req, res) => {
     }
 
     output = output.trim();
-    // If logToConsole is enabled, also print the final formatted output
     if (logToConsole) {
       console.log("Final formatted output:\n", output);
     }
 
-    if (saveToProvided) {
-      // Write the formatted output to the provided destination file path.
-      fs.writeFile(saveTo, output, (err) => {
+    if (createDownload) {
+      // Write the formatted output to the internal download directory
+      fs.writeFile(downloadFilePath, output, (err) => {
         if (err) {
           console.error('Error writing formatted file:', err);
           return res.status(500).json({ error: 'Failed to save file', details: err.message });
         }
-        console.log(`Formatted XML saved to ${saveTo}`);
-        res.json({ message: `Formatted XML saved to ${saveTo}` });
+        console.log(`Formatted XML saved internally as ${downloadFilePath}`);
+        // Build a download URL using the host header from the request.
+        const host = req.get('host');
+        const protocol = req.protocol;
+        const downloadUrl = `${protocol}://${host}/download/${downloadFileName}`;
+        console.log("Download URL:", downloadUrl);
+        res.json({ message: `Formatted XML saved internally.`, downloadUrl });
       });
     } else {
       console.log("Returning formatted XML in response.");

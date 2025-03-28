@@ -1,19 +1,20 @@
 openapi: 3.0.0
 info:
   title: xmlStarlet API Server
-  version: "1.2.0"
+  version: "1.6.2"
   description: >
-    API for XML processing using xmlStarlet.
-    This API provides endpoints to extract data, validate, transform, and format XML files.
+    API for XML processing using xmlStarlet. Endpoints are provided to extract data,
+    validate, transform, and format XML files. The server automatically prepends "/app/xmlfiles"
+    to the provided file paths.
 servers:
-  - url: /api
+  - url: http://127.0.0.1:3000
 paths:
   /extract:
     post:
-      summary: Extract values from an XML file
-      description: >
-        Executes an XPath expression against a provided XML file.
+      summary: Extract values from an XML file using XPath
+      description: Executes xmlstarlet's select command using a provided XPath expression on a given XML file.
       requestBody:
+        description: JSON payload with filePath and xpath.
         required: true
         content:
           application/json:
@@ -23,10 +24,12 @@ paths:
                 filePath:
                   type: string
                   description: >
-                    The path to the XML file. Must match the pattern: `/app/xmlfiles/{filename}.xml`
+                    The file path of the XML file. The server automatically prepends "/app/xmlfiles" to this path.
+                  example: "/Volumes/share/directory/A.xml"
                 xpath:
                   type: string
                   description: The XPath expression to evaluate.
+                  example: "count(//OM_RECORD)"
               required:
                 - filePath
                 - xpath
@@ -42,7 +45,7 @@ paths:
                     type: string
                     description: The extracted value.
         '400':
-          description: Invalid request parameters.
+          description: Invalid input parameters or file not found.
           content:
             application/json:
               schema:
@@ -59,12 +62,13 @@ paths:
                 properties:
                   error:
                     type: string
+
   /validate:
     post:
       summary: Validate an XML file
-      description: >
-        Validates that an XML file is well-formed (and optionally against a schema).
+      description: Uses xmlstarlet to check that an XML file is well-formed.
       requestBody:
+        description: JSON payload with filePath.
         required: true
         content:
           application/json:
@@ -74,7 +78,8 @@ paths:
                 filePath:
                   type: string
                   description: >
-                    The path to the XML file to validate. Must match the pattern: `/app/xmlfiles/{filename}.xml`
+                    The file path of the XML file to validate. The server automatically prepends "/app/xmlfiles" to this path.
+                  example: "/Volumes/share/directory/A.xml"
               required:
                 - filePath
       responses:
@@ -90,7 +95,7 @@ paths:
                   message:
                     type: string
         '400':
-          description: Invalid request parameters.
+          description: Invalid file path or file not found.
           content:
             application/json:
               schema:
@@ -107,14 +112,13 @@ paths:
                 properties:
                   error:
                     type: string
-                  details:
-                    type: string
+
   /transform:
     post:
       summary: Transform an XML file using an XSLT stylesheet
-      description: >
-        Applies an XSLT transformation to an XML file.
+      description: Applies xmlstarlet's transform command using an XSLT file on a given XML file.
       requestBody:
+        description: JSON payload with xmlFilePath and xsltFilePath.
         required: true
         content:
           application/json:
@@ -124,11 +128,13 @@ paths:
                 xmlFilePath:
                   type: string
                   description: >
-                    The path to the source XML file. Must match the pattern: `/app/xmlfiles/{filename}.xml`
+                    The file path of the source XML file. The server automatically prepends "/app/xmlfiles" to this path.
+                  example: "/Volumes/share/directory/A.xml"
                 xsltFilePath:
                   type: string
                   description: >
-                    The path to the XSLT file. Must match the pattern: `/app/xmlfiles/{filename}.xslt`
+                    The file path of the XSLT file. The server automatically prepends "/app/xmlfiles" to this path.
+                  example: "/Volumes/share/directory/style.xslt"
               required:
                 - xmlFilePath
                 - xsltFilePath
@@ -142,9 +148,9 @@ paths:
                 properties:
                   result:
                     type: string
-                    description: The transformed XML output.
+                    description: The transformed XML.
         '400':
-          description: Invalid request parameters.
+          description: Invalid file paths or file not found.
           content:
             application/json:
               schema:
@@ -163,14 +169,17 @@ paths:
                     type: string
                   details:
                     type: string
+
   /format:
     post:
       summary: Format (pretty-print) an XML file
       description: >
-        Formats the XML file for improved readability.
-        If an optional `saveTo` parameter is provided (and is not empty), the formatted XML is saved to that file path.
-        Otherwise, the formatted XML is returned in the API response.
+        Uses xmlstarlet's formatting command to pretty-print an XML file.
+        The server automatically prepends "/app/xmlfiles" to the provided filePath.
+        If the optional "saveTo" parameter is provided (non-empty), the formatted XML is saved internally
+        and a download URL is returned. Otherwise, the formatted XML is returned in the response.
       requestBody:
+        description: JSON payload with filePath, optional saveTo, and optional logToConsole.
         required: true
         content:
           application/json:
@@ -180,12 +189,18 @@ paths:
                 filePath:
                   type: string
                   description: >
-                    The path to the XML file to format. Must match the pattern: `/app/xmlfiles/{filename}.xml`
+                    The file path of the XML file to format. The server automatically prepends "/app/xmlfiles" to this path.
+                  example: "/Volumes/share/directory/A.xml"
                 saveTo:
                   type: string
                   description: >
-                    (Optional) The destination path to save the formatted XML.
-                    Must match the pattern: `/app/xmlfiles/{filename}.xml`
+                    Optional. The desired file name for the formatted XML. If provided, the file is saved internally and a download URL is returned.
+                  example: "A_formatted.xml"
+                logToConsole:
+                  type: boolean
+                  description: >
+                    Optional. If true, the formatted XML is printed to the server console.
+                  example: false
               required:
                 - filePath
       responses:
@@ -199,13 +214,17 @@ paths:
                   result:
                     type: string
                     description: >
-                      The formatted XML if no destination path is provided.
+                      The formatted XML (returned if saveTo is not provided).
                   message:
                     type: string
                     description: >
-                      A confirmation message when the formatted XML is saved.
+                      A confirmation message if the formatted XML was saved internally.
+                  downloadUrl:
+                    type: string
+                    description: >
+                      The URL from which the formatted XML file can be downloaded (if saveTo is provided).
         '400':
-          description: Invalid request parameters.
+          description: Invalid file path or file not found.
           content:
             application/json:
               schema:
