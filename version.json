@@ -6,7 +6,7 @@
       "date": "2025-03-28",
       "changes": [
         "Reworked file handling in a easier way",
-        "Added additional looging to console"
+        "Added additional looging to console for all endpoints"
       ]
     },
     {
