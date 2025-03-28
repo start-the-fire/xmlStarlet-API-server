@@ -1,6 +1,13 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "changelog": [
+    {
+      "version": "1.7.0",
+      "date": "2025-03-28",
+      "changes": [
+        "Republish to update swagger documentation for the API endpoint"
+      ]
+    },
     {
       "version": "1.6.2",
       "date": "2025-03-28",
