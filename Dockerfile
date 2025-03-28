@@ -7,8 +7,6 @@ RUN apk add --no-cache xmlstarlet
 # Set the working directory in the container
 WORKDIR /app
 
-VOLUME ["/Volumes"]
-
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install

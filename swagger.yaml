@@ -1,20 +1,32 @@
 openapi: 3.0.0
 info:
-  title: xmlStarlet API Server
-  version: "1.6.2"
+  title: XML-JSON Gateway API
+  version: "1.2.0"
   description: >
-    API for XML processing using xmlStarlet. Endpoints are provided to extract data,
-    validate, transform, and format XML files. The server automatically prepends "/app/xmlfiles"
-    to the provided file paths.
+    The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
+    and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
+    using XPath, validate, transform, and format XML files, as well as to convert XML to JSON and 
+    JSON to XML, and verify/correct JSON files. All file paths are automatically mapped to internal storage.
 servers:
-  - url: http://127.0.0.1:3000
+  - url: http://localhost:3000
+tags:
+  - name: "XML Operations"
+    description: "Endpoints related to XML processing such as extraction, validation, transformation, and formatting."
+  - name: "JSON Operations"
+    description: "Endpoints for verifying and formatting JSON files."
+  - name: "Conversion Operations"
+    description: "Endpoints for converting between XML and JSON formats."
 paths:
   /extract:
     post:
-      summary: Extract values from an XML file using XPath
-      description: Executes xmlstarlet's select command using a provided XPath expression on a given XML file.
+      tags:
+        - "XML Operations"
+      summary: Extract Data from XML using XPath
+      description: >
+        Evaluates a provided XPath expression against an XML file. The API automatically transforms 
+        the provided file path to its internal storage location and returns the extracted value.
       requestBody:
-        description: JSON payload with filePath and xpath.
+        description: JSON payload containing the XML file path and the XPath expression.
         required: true
         content:
           application/json:
@@ -24,8 +36,8 @@ paths:
                 filePath:
                   type: string
                   description: >
-                    The file path of the XML file. The server automatically prepends "/app/xmlfiles" to this path.
-                  example: "/Volumes/share/directory/A.xml"
+                    The file path of the XML file. The API maps this to internal storage automatically.
+                  example: "/Volumes/Helmut/helmut480-test/A.xml"
                 xpath:
                   type: string
                   description: The XPath expression to evaluate.
@@ -45,7 +57,7 @@ paths:
                     type: string
                     description: The extracted value.
         '400':
-          description: Invalid input parameters or file not found.
+          description: Invalid input, file not found, or incorrect file extension.
           content:
             application/json:
               schema:
@@ -54,7 +66,7 @@ paths:
                   error:
                     type: string
         '500':
-          description: Internal server error.
+          description: Server encountered an error during extraction.
           content:
             application/json:
               schema:
@@ -62,13 +74,16 @@ paths:
                 properties:
                   error:
                     type: string
-
   /validate:
     post:
-      summary: Validate an XML file
-      description: Uses xmlstarlet to check that an XML file is well-formed.
+      tags:
+        - "XML Operations"
+      summary: Validate XML File
+      description: >
+        Checks whether an XML file is well-formed. The API transforms the file path internally 
+        and returns a validation result.
       requestBody:
-        description: JSON payload with filePath.
+        description: JSON payload with the XML file path.
         required: true
         content:
           application/json:
@@ -78,8 +93,8 @@ paths:
                 filePath:
                   type: string
                   description: >
-                    The file path of the XML file to validate. The server automatically prepends "/app/xmlfiles" to this path.
-                  example: "/Volumes/share/directory/A.xml"
+                    The XML file path. The API maps this to internal storage automatically.
+                  example: "/Volumes/Helmut/helmut480-test/A.xml"
               required:
                 - filePath
       responses:
@@ -95,7 +110,7 @@ paths:
                   message:
                     type: string
         '400':
-          description: Invalid file path or file not found.
+          description: Invalid file path, file not found, or wrong file extension.
           content:
             application/json:
               schema:
@@ -104,7 +119,7 @@ paths:
                   error:
                     type: string
         '500':
-          description: Validation error.
+          description: XML validation error.
           content:
             application/json:
               schema:
@@ -112,13 +127,16 @@ paths:
                 properties:
                   error:
                     type: string
-
   /transform:
     post:
-      summary: Transform an XML file using an XSLT stylesheet
-      description: Applies xmlstarlet's transform command using an XSLT file on a given XML file.
+      tags:
+        - "XML Operations"
+      summary: Transform XML using XSLT
+      description: >
+        Applies an XSLT stylesheet to an XML file to produce transformed XML. The API automatically 
+        maps both file paths to internal storage and returns the transformed XML.
       requestBody:
-        description: JSON payload with xmlFilePath and xsltFilePath.
+        description: JSON payload with the source XML file path and the XSLT file path.
         required: true
         content:
           application/json:
@@ -128,13 +146,13 @@ paths:
                 xmlFilePath:
                   type: string
                   description: >
-                    The file path of the source XML file. The server automatically prepends "/app/xmlfiles" to this path.
-                  example: "/Volumes/share/directory/A.xml"
+                    The source XML file path. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/A.xml"
                 xsltFilePath:
                   type: string
                   description: >
-                    The file path of the XSLT file. The server automatically prepends "/app/xmlfiles" to this path.
-                  example: "/Volumes/share/directory/style.xslt"
+                    The XSLT file path. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/style.xslt"
               required:
                 - xmlFilePath
                 - xsltFilePath
@@ -150,7 +168,7 @@ paths:
                     type: string
                     description: The transformed XML.
         '400':
-          description: Invalid file paths or file not found.
+          description: Invalid file paths, file not found, or incorrect file extensions.
           content:
             application/json:
               schema:
@@ -169,17 +187,17 @@ paths:
                     type: string
                   details:
                     type: string
-
   /format:
     post:
-      summary: Format (pretty-print) an XML file
+      tags:
+        - "XML Operations"
+      summary: Format XML File
       description: >
-        Uses xmlstarlet's formatting command to pretty-print an XML file.
-        The server automatically prepends "/app/xmlfiles" to the provided filePath.
-        If the optional "saveTo" parameter is provided (non-empty), the formatted XML is saved internally
-        and a download URL is returned. Otherwise, the formatted XML is returned in the response.
+        Formats (pretty-prints) an XML file to improve readability. The API transforms the file path internally. 
+        If a "saveTo" parameter is provided, the formatted XML is saved internally and a download URL is returned; 
+        otherwise, the formatted XML is returned in the response.
       requestBody:
-        description: JSON payload with filePath, optional saveTo, and optional logToConsole.
+        description: JSON payload with the XML file path, an optional saveTo filename, and an optional logToConsole flag.
         required: true
         content:
           application/json:
@@ -189,23 +207,23 @@ paths:
                 filePath:
                   type: string
                   description: >
-                    The file path of the XML file to format. The server automatically prepends "/app/xmlfiles" to this path.
-                  example: "/Volumes/share/directory/A.xml"
+                    The XML file path to format. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/A.xml"
                 saveTo:
                   type: string
                   description: >
-                    Optional. The desired file name for the formatted XML. If provided, the file is saved internally and a download URL is returned.
+                    Optional. Desired filename for the formatted XML. If provided, the file is saved internally and a download URL is returned.
                   example: "A_formatted.xml"
                 logToConsole:
                   type: boolean
                   description: >
-                    Optional. If true, the formatted XML is printed to the server console.
+                    Optional. If true, prints the formatted XML to the server console.
                   example: false
               required:
                 - filePath
       responses:
         '200':
-          description: Formatting successful.
+          description: XML formatting successful.
           content:
             application/json:
               schema:
@@ -214,17 +232,17 @@ paths:
                   result:
                     type: string
                     description: >
-                      The formatted XML (returned if saveTo is not provided).
+                      The formatted XML (if "saveTo" is not provided).
                   message:
                     type: string
                     description: >
-                      A confirmation message if the formatted XML was saved internally.
+                      Confirmation message if the formatted XML was saved internally.
                   downloadUrl:
                     type: string
                     description: >
-                      The URL from which the formatted XML file can be downloaded (if saveTo is provided).
+                      URL to download the formatted XML file (if "saveTo" is provided).
         '400':
-          description: Invalid file path or file not found.
+          description: Invalid file path, file not found, or incorrect file extension.
           content:
             application/json:
               schema:
@@ -234,6 +252,286 @@ paths:
                     type: string
         '500':
           description: Formatting error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+  /xmltojson:
+    post:
+      tags:
+        - "Conversion Operations"
+      summary: Convert XML to JSON
+      description: >
+        Converts an XML file into JSON format using fast-xml-parser. The API transforms the XML file path internally. 
+        If a "saveTo" parameter is provided (with a .json extension), the converted JSON is saved internally and a download URL is returned; 
+        otherwise, the JSON is returned in the response.
+      requestBody:
+        description: JSON payload with the XML file path, an optional saveTo filename (with .json extension), and an optional logToConsole flag.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filePath:
+                  type: string
+                  description: >
+                    The XML file path to convert. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/A.xml"
+                saveTo:
+                  type: string
+                  description: >
+                    Optional. Desired filename for the converted JSON. If provided, must have a .json extension.
+                  example: "A_converted.json"
+                logToConsole:
+                  type: boolean
+                  description: >
+                    Optional. If true, prints the converted JSON to the server console.
+                  example: false
+              required:
+                - filePath
+      responses:
+        '200':
+          description: XML to JSON conversion successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: >
+                      The converted JSON (if "saveTo" is not provided).
+                  message:
+                    type: string
+                    description: >
+                      Confirmation message if the JSON was saved internally.
+                  downloadUrl:
+                    type: string
+                    description: >
+                      URL to download the converted JSON file (if "saveTo" is provided).
+        '400':
+          description: Invalid file path, file not found, or incorrect input/saveTo file extension.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Conversion error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+  /jsontoxml:
+    post:
+      tags:
+        - "Conversion Operations"
+      summary: Convert JSON to XML
+      description: >
+        Converts a JSON file into XML format using fast-xml-parser's XMLBuilder. The API transforms the JSON file path internally. 
+        If a "saveTo" parameter is provided (with a .xml extension), the converted XML is saved internally and a download URL is returned; 
+        otherwise, the XML is returned in the response.
+      requestBody:
+        description: JSON payload with the JSON file path, an optional saveTo filename (with .xml extension), and an optional logToConsole flag.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filePath:
+                  type: string
+                  description: >
+                    The JSON file path to convert. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/A.json"
+                saveTo:
+                  type: string
+                  description: >
+                    Optional. Desired filename for the converted XML. If provided, must have a .xml extension.
+                  example: "A_converted.xml"
+                logToConsole:
+                  type: boolean
+                  description: >
+                    Optional. If true, prints the converted XML to the server console.
+                  example: false
+              required:
+                - filePath
+      responses:
+        '200':
+          description: JSON to XML conversion successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: >
+                      The converted XML (if "saveTo" is not provided).
+                  message:
+                    type: string
+                    description: >
+                      Confirmation message if the XML was saved internally.
+                  downloadUrl:
+                    type: string
+                    description: >
+                      URL to download the converted XML file (if "saveTo" is provided).
+        '400':
+          description: Invalid file path, file not found, or incorrect input/saveTo file extension.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Conversion error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+  /jsonverify:
+    post:
+      tags:
+        - "JSON Operations"
+      summary: Verify JSON File Validity
+      description: >
+        Reads a JSON file and checks whether it is valid by attempting to parse it. 
+        The API transforms the file path internally and returns the validation result.
+      requestBody:
+        description: JSON payload with the JSON file path and an optional logToConsole flag.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filePath:
+                  type: string
+                  description: >
+                    The JSON file path to verify. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/A.json"
+                logToConsole:
+                  type: boolean
+                  description: >
+                    Optional. If true, additional logging is printed to the server console.
+                  example: false
+              required:
+                - filePath
+      responses:
+        '200':
+          description: JSON verification successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    description: Indicates if the JSON is valid.
+                  message:
+                    type: string
+                    description: A message indicating JSON validity.
+        '400':
+          description: Invalid file path, incorrect extension, or JSON file not found/invalid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  error:
+                    type: string
+                  details:
+                    type: string
+  /jsonformat:
+    post:
+      tags:
+        - "JSON Operations"
+      summary: Format and Correct JSON File
+      description: >
+        Attempts to format (pretty-print) a JSON file. If the JSON is valid, returns the formatted version.
+        If invalid, the API will attempt to repair it using jsonrepair. The API transforms the file path internally.
+        If a "saveTo" parameter is provided (with a .json extension), the corrected JSON is saved internally and a download URL is returned;
+        otherwise, the corrected JSON is returned in the response.
+      requestBody:
+        description: JSON payload with the JSON file path, an optional saveTo filename, and an optional logToConsole flag.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filePath:
+                  type: string
+                  description: >
+                    The JSON file path to format/correct. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/A.json"
+                saveTo:
+                  type: string
+                  description: >
+                    Optional. Desired filename for the corrected JSON. If provided, must have a .json extension.
+                  example: "A_corrected.json"
+                logToConsole:
+                  type: boolean
+                  description: >
+                    Optional. If true, prints the corrected JSON to the server console.
+                  example: false
+              required:
+                - filePath
+      responses:
+        '200':
+          description: JSON formatting/correction successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: >
+                      The corrected JSON (if "saveTo" is not provided).
+                  message:
+                    type: string
+                    description: >
+                      Confirmation message if the corrected JSON was saved internally.
+                  downloadUrl:
+                    type: string
+                    description: >
+                      URL to download the corrected JSON file (if "saveTo" is provided).
+        '400':
+          description: Invalid file path, incorrect extension, file not found, or unrepaired JSON errors.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+        '500':
+          description: Formatting/correction error.
           content:
             application/json:
               schema:

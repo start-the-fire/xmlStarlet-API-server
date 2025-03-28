@@ -1,6 +1,17 @@
 {
-  "version": "1.7.0",
+  "version": "2.0.0",
   "changelog": [
+    {
+      "version": "2.0.0",
+      "date": "2025-03-28",
+      "changes": [
+        "Extending function by adding fast-xml-parser and jsonrepair",
+        "Checking extensions of the input and output files",
+        "Added support for xml to json conversion",
+        "Updated swagger documentation for the API endpoint",
+        "Renamed application to XML-JSON Gateway API"
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "2025-03-28",
