@@ -6,16 +6,38 @@ const YAML = require('yamljs');
 const swaggerUi = require('swagger-ui-express');
 const { XMLParser, XMLBuilder } = require("fast-xml-parser");
 const { jsonrepair } = require('jsonrepair');
-const app = express();
 
+const app = express();
 app.use(express.json());
+
+// API Key Middleware
+const API_KEY = process.env.API_KEY || 'Yml0dGUwNDc5';
+app.use((req, res, next) => {
+  // Bypass API key verification for /api and /swagger endpoints
+  if (req.path.startsWith('/api') || req.path.startsWith('/swagger')) {
+    return next();
+  }
+  
+  // For all other endpoints, check the API key
+  const key = req.headers['x-api-key'];
+  if (!key) {
+    console.error("API key missing");
+    return res.status(403).json({ error: 'Forbidden: API key is missing.' });
+  }
+  if (key !== API_KEY) {
+    console.error("Invalid API key provided:", key);
+    return res.status(403).json({ error: 'Forbidden: Invalid API key.' });
+  }
+  next();
+});
 
 // Load your Swagger document (adjust the path as needed)
 const swaggerDocument = YAML.load('./swagger.yaml');
 
 // Serve Swagger UI at /api
 app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-// Serve the raw swagger.yaml file at /api/swagger
+
+// Serve the raw swagger.yaml file at /swagger
 app.get('/swagger', (req, res) => {
   res.sendFile(path.join(__dirname, './swagger.yaml'));
 });
@@ -31,9 +53,7 @@ app.use('/download', express.static(DOWNLOAD_DIR));
 /**
  * Helper function to transform an incoming file path.
  * It prepends '/app/xmlfiles' if the input does not already start with it.
- * For example:
- *   '/Volumes/Helmut/helmut480-test/A.xml' becomes
- *   '/app/xmlfiles/Volumes/Helmut/helmut480-test/A.xml'
+ * For example: '/Volumes/Helmut/helmut480-test/A.xml' becomes '/app/xmlfiles/Volumes/Helmut/helmut480-test/A.xml'
  */
 function transformPath(inputPath) {
   console.log("transformPath - Received inputPath:", inputPath);
@@ -235,7 +255,6 @@ app.post('/format', (req, res) => {
   let downloadFileName = '';
   if (saveTo && saveTo.trim() !== '') {
     // For /format, we expect the input to be XML.
-    // Optionally, if saveTo is provided, we don't check its extension here since the internal file can have any name.
     downloadFileName = path.basename(saveTo);
     downloadFilePath = path.join(DOWNLOAD_DIR, downloadFileName);
     console.log("Download file will be saved as:", downloadFilePath);

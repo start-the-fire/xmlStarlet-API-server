@@ -1,14 +1,24 @@
 openapi: 3.0.0
 info:
   title: XML-JSON Gateway API
-  version: "2.0.0"
+  version: "2.1.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
-    using XPath, validate, transform, and format XML files, as well as to convert XML to JSON and 
-    JSON to XML, and verify/correct JSON files. All file paths are automatically mapped to internal storage.
+    using XPath, validate, transform, and format XML files, as well as convert XML to JSON and JSON to XML, 
+    and verify/correct JSON files. All file paths are automatically mapped to internal storage.
+    An API key is required in the request header ("x-api-key") for authorization.
+    For an API access send an email to: bernhard@ikmail.com
 servers:
-  - url: http://localhost:3000
+  - url: http://127.0.0.1:3000
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+security:
+  - ApiKeyAuth: []
 tags:
   - name: "XML Operations"
     description: "Endpoints related to XML processing such as extraction, validation, transformation, and formatting."
@@ -23,8 +33,8 @@ paths:
         - "XML Operations"
       summary: Extract Data from XML using XPath
       description: >
-        Evaluates a provided XPath expression against an XML file. The API automatically transforms 
-        the provided file path to its internal storage location and returns the extracted value.
+        Evaluates a provided XPath expression against an XML file. The API transforms the provided file path 
+        to its internal storage location and returns the extracted value.
       requestBody:
         description: JSON payload containing the XML file path and the XPath expression.
         required: true
@@ -57,7 +67,7 @@ paths:
                     type: string
                     description: The extracted value.
         '400':
-          description: Invalid input, file not found, or incorrect file extension.
+          description: Invalid input, file not found, or wrong file extension.
           content:
             application/json:
               schema:
@@ -80,8 +90,7 @@ paths:
         - "XML Operations"
       summary: Validate XML File
       description: >
-        Checks whether an XML file is well-formed. The API transforms the file path internally 
-        and returns a validation result.
+        Checks whether an XML file is well-formed. The API transforms the file path internally and returns a validation result.
       requestBody:
         description: JSON payload with the XML file path.
         required: true
@@ -133,8 +142,7 @@ paths:
         - "XML Operations"
       summary: Transform XML using XSLT
       description: >
-        Applies an XSLT stylesheet to an XML file to produce transformed XML. The API automatically 
-        maps both file paths to internal storage and returns the transformed XML.
+        Applies an XSLT stylesheet to an XML file to produce transformed XML. The API transforms both file paths to internal storage and returns the transformed XML.
       requestBody:
         description: JSON payload with the source XML file path and the XSLT file path.
         required: true
