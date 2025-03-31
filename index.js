@@ -14,7 +14,7 @@ app.use(express.json());
 const API_KEY = process.env.API_KEY || 'Yml0dGUwNDc5';
 app.use((req, res, next) => {
   // Bypass API key verification for /api and /swagger endpoints
-  if (req.path.startsWith('/api') || req.path.startsWith('/swagger')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/swagger') || req.path.startsWith('/changelog')) {
     return next();
   }
   
@@ -40,6 +40,29 @@ app.use('/api', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Serve the raw swagger.yaml file at /swagger
 app.get('/swagger', (req, res) => {
   res.sendFile(path.join(__dirname, './swagger.yaml'));
+});
+
+// Serve the changelog HTML page
+app.get('/changelog', (req, res) => {
+  res.sendFile(path.join(__dirname, './public/changelog.html'));
+});
+
+// Dedicated endpoint to return the changelog JSON data
+app.get('/changelog-json', (req, res) => {
+  console.log("=== /changelog-json endpoint called ===");
+  fs.readFile('./version.json', 'utf8', (err, data) => {
+    if (err) {
+      console.error("Error reading version.json:", err);
+      return res.status(500).json({ error: "Error reading version information" });
+    }
+    try {
+      const versionInfo = JSON.parse(data);
+      return res.json({ changelog: versionInfo.changelog });
+    } catch (parseErr) {
+      console.error("Error parsing version.json:", parseErr);
+      return res.status(500).json({ error: "Error parsing version information" });
+    }
+  });
 });
 
 // Define a directory for downloads (internal to the container)
@@ -702,6 +725,16 @@ app.post('/jsonextract', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+let version = "unknown";
+
+try {
+  const versionData = fs.readFileSync('./version.json', 'utf8');
+  const versionJson = JSON.parse(versionData);
+  version = versionJson.version || version;
+} catch (err) {
+  console.error("Error reading version.json:", err);
+}
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}, version: ${version}`);
 });

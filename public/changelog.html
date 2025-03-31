@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>XML-JSON Gateway API - Changelog</title>
+  <style>
+    /* Base styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+    }
+    /* Header with modern light blue accent */
+    .header {
+      background-color: #4A90E2; /* modern blue */
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    /* Container for the page content */
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 15px;
+    }
+    /* Changelog title */
+    h1 {
+      text-align: center;
+      color: #4A90E2;
+      margin-bottom: 30px;
+    }
+    /* Individual changelog entry card */
+    .changelog-entry {
+      background-color: #fff;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .changelog-entry h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #4A90E2;
+      font-weight: 500;
+    }
+    .entry-date {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+    .changelog-entry ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .changelog-entry ul li {
+      position: relative;
+      padding-left: 20px;
+      margin-bottom: 5px;
+    }
+    .changelog-entry ul li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #4A90E2;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">XML-JSON Gateway API</div>
+  <div class="container">
+    <h1>Changelog</h1>
+    <div id="changelog"></div>
+  </div>
+  <script>
+    // Fetch the changelog JSON from the dedicated endpoint (/changelog-json)
+    fetch('/changelog-json')
+      .then(response => response.json())
+      .then(data => {
+        const changelogDiv = document.getElementById('changelog');
+        if (!data.changelog || data.changelog.length === 0) {
+          changelogDiv.innerHTML = '<p>No changelog entries available.</p>';
+          return;
+        }
+        data.changelog.forEach(entry => {
+          const entryDiv = document.createElement('div');
+          entryDiv.className = 'changelog-entry';
+          
+          const title = document.createElement('h2');
+          title.textContent = `Version ${entry.version}`;
+          entryDiv.appendChild(title);
+          
+          const date = document.createElement('div');
+          date.className = 'entry-date';
+          date.textContent = entry.date;
+          entryDiv.appendChild(date);
+          
+          const list = document.createElement('ul');
+          entry.changes.forEach(change => {
+            const li = document.createElement('li');
+            li.textContent = change;
+            list.appendChild(li);
+          });
+          entryDiv.appendChild(list);
+          changelogDiv.appendChild(entryDiv);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching changelog:', error);
+        document.getElementById('changelog').textContent = 'Error loading changelog.';
+      });
+  </script>
+</body>
+</html>

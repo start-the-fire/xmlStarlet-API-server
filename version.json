@@ -1,6 +1,14 @@
 {
-  "version": "2.4.0",
+  "version": "2.5.0",
   "changelog": [
+    {
+      "version": "2.5.0",
+      "date": "2025-03-31",
+      "changes": [
+        "Added version information to startup log",
+        "Added /changelog endpoint"
+      ]
+    },
     {
       "version": "2.4.0",
       "date": "2025-03-31",
