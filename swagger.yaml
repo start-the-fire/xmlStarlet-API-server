@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: XML-JSON Gateway API
-  version: "2.2.0"
+  version: "2.3.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
@@ -418,68 +418,81 @@ paths:
                   details:
                     type: string
   /jsonextract:
-    post:
-      tags:
-        - "JSON Operations"
-      summary: Extract a specific key from a JSON file
-      description: >
-        Extracts the value(s) corresponding to the specified key from a JSON file.
-        The API maps the JSON file path internally and returns the extracted result.
-      requestBody:
-        description: JSON payload with the JSON file path, the key to extract, and an optional logToConsole flag.
-        required: true
+  post:
+    tags:
+      - "JSON Operations"
+    summary: Extract a specific key from a JSON file
+    description: >
+      Extracts the value(s) corresponding to the specified key from a JSON file.
+      The API maps the JSON file path internally and returns the extracted result.
+      If an optional index parameter is provided:
+       - If set to -1, all available values are returned.
+       - Otherwise, the value at that index is returned.
+    requestBody:
+      description: JSON payload with the JSON file path, the key to extract, an optional index, and an optional logToConsole flag.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              filePath:
+                type: string
+                description: The JSON file path to extract from.
+                example: "/Volumes/helmut_1/valid.json"
+              key:
+                type: string
+                description: The key to search for in the JSON file.
+                example: "city"
+              index:
+                type: integer
+                description: >
+                  Optional. The index of the element to extract from the key’s value if it is an array.
+                  If set to -1, all available values are returned.
+                example: 1
+              logToConsole:
+                type: boolean
+                description: Optional. If true, prints additional logs to the server console.
+                example: false
+            required:
+              - filePath
+              - key
+    responses:
+      '200':
+        description: JSON extraction successful.
         content:
           application/json:
             schema:
               type: object
               properties:
-                filePath:
+                result:
+                  description: The extracted value or values corresponding to the key.
+                  oneOf:
+                    - type: array
+                    - type: string
+                    - type: number
+                    - type: boolean
+                    - type: object
+      '400':
+        description: Invalid input or key not found.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
                   type: string
-                  description: The JSON file path to extract from.
-                  example: "/Volumes/Helmut/helmut480-test/A.json"
-                key:
+      '500':
+        description: Server error during JSON extraction.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
                   type: string
-                  description: The key to search for in the JSON file.
-                  example: "name"
-                logToConsole:
-                  type: boolean
-                  description: >
-                    Optional. If true, prints additional logs to the server console.
-                  example: false
-              required:
-                - filePath
-                - key
-      responses:
-        '200':
-          description: JSON extraction successful.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: object
-                    description: The extracted value(s) corresponding to the key.
-        '400':
-          description: Invalid input or key not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '500':
-          description: Server error during JSON extraction.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  details:
-                    type: string
+                details:
+                  type: string
   /jsonverify:
     post:
       tags:

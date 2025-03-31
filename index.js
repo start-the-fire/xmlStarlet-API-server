@@ -588,34 +588,42 @@ app.post('/jsonformat', (req, res) => {
 
 /* ========================
    /jsonextract endpoint
-   Expected input: JSON file (.json) and a key to extract.
+   Expected input: JSON file (.json), a key to extract, and an optional index.
    Functionality: Extracts the value(s) corresponding to the specified key.
+   If the extracted value is an array (and it's the only occurrence), it is unwrapped.
+   If an index is provided:
+     - If index is -1, returns all available values.
+     - Otherwise, returns only the element at that index.
 ======================== */
 app.post('/jsonextract', (req, res) => {
   console.log("=== /jsonextract endpoint called ===");
   console.log("Request body:", req.body);
   let { filePath, key, logToConsole } = req.body;
-  
+  let { index } = req.body; // Optional index parameter
+
   logToConsole = logToConsole === true;
   console.log("Received filePath for JSON extraction:", filePath);
   console.log("Key to extract:", key);
-  
+  if (index !== undefined) {
+    console.log("Requested index:", index);
+  }
+
   // Transform file path for internal mapping
   filePath = transformPath(filePath);
   console.log("Transformed filePath for JSON extraction:", filePath);
-  
+
   // Check that the input file has a .json extension
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== '.json') {
     console.error(`Invalid input file extension: ${ext}. Expected .json`);
     return res.status(400).json({ error: 'Invalid input file extension. Expected .json' });
   }
-  
+
   if (!fs.existsSync(filePath)) {
     console.error(`Source JSON file does not exist at path: ${filePath}`);
     return res.status(400).json({ error: 'Source JSON file does not exist.' });
   }
-  
+
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
       console.error("Error reading JSON file:", err);
@@ -628,13 +636,13 @@ app.post('/jsonextract', (req, res) => {
       console.error("Error parsing JSON:", parseErr);
       return res.status(500).json({ error: 'Error parsing JSON', details: parseErr.message });
     }
-    
+
     // Validate the key parameter
     if (!key || typeof key !== 'string') {
       console.error("Invalid key parameter:", key);
       return res.status(400).json({ error: 'Invalid key parameter.' });
     }
-    
+
     // Recursive function to extract all occurrences of the specified key
     function extractKey(obj, targetKey) {
       let results = [];
@@ -650,18 +658,44 @@ app.post('/jsonextract', (req, res) => {
       }
       return results;
     }
-    
-    const extractedValues = extractKey(jsonObj, key);
+
+    let extractedValues = extractKey(jsonObj, key);
     if (logToConsole) {
       console.log("Extracted values for key", key, ":", extractedValues);
     }
-    
+
     if (extractedValues.length === 0) {
       console.error("Key not found:", key);
       return res.status(400).json({ error: `Key '${key}' not found in JSON file.` });
     }
-    
-    // Return a single value if only one match is found, otherwise return the array of values
+
+    // If a single occurrence is found and it is an array, unwrap it.
+    if (extractedValues.length === 1 && Array.isArray(extractedValues[0])) {
+      extractedValues = extractedValues[0];
+    }
+
+    // If an index is provided, check its value.
+    if (index !== undefined) {
+      let idx = index;
+      if (typeof idx !== 'number') {
+        idx = parseInt(idx, 10);
+      }
+      if (isNaN(idx)) {
+        console.error("Invalid index parameter:", index);
+        return res.status(400).json({ error: 'Invalid index parameter. It must be a number.' });
+      }
+      // If index is -1, return all available values.
+      if (idx === -1) {
+        return res.json({ result: extractedValues });
+      }
+      if (idx < 0 || idx >= extractedValues.length) {
+        console.error("Index out of range:", idx);
+        return res.status(400).json({ error: 'Index out of range.' });
+      }
+      return res.json({ result: extractedValues[idx] });
+    }
+
+    // Return a single value if only one match is found, otherwise return the array of values.
     let resultToReturn = extractedValues.length === 1 ? extractedValues[0] : extractedValues;
     return res.json({ result: resultToReturn });
   });

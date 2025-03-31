@@ -1,6 +1,13 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "changelog": [
+    {
+      "version": "2.3.0",
+      "date": "2025-03-31",
+      "changes": [
+        "Adopted /jsonextract to extract key with optional index"
+      ]
+    },
     {
       "version": "2.2.0",
       "date": "2025-03-31",
