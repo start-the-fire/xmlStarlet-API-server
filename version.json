@@ -1,6 +1,13 @@
 {
-  "version": "2.6.0",
+  "version": "2.7.0",
   "changelog": [
+    {
+      "version": "2.7.0",
+      "date": "2025-03-31",
+      "changes": [
+        "Adopted swagger file for custom IP address"
+      ]
+    },
     {
       "version": "2.6.0",
       "date": "2025-03-31",

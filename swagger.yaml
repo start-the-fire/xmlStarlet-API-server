@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: XML-JSON Gateway API
-  version: "2.6.0"
+  version: "2.7.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
@@ -10,7 +10,13 @@ info:
     An API key is required in the request header ("x-api-key") for authorization.
     For an API access send an email to: bernhard@ikmail.com
 servers:
-  - url: http://127.0.0.1:3000
+  - url: http://{serverIP}:3000
+    description: Server configuration
+    variables:
+      serverIP:
+        default: "127.0.0.1"
+        description: "The IP address of the server (user configurable)"
+
 components:
   securitySchemes:
     ApiKeyAuth:
