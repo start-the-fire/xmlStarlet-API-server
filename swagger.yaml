@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: XML-JSON Gateway API
-  version: "2.5.0"
+  version: "2.6.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 

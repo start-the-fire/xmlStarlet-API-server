@@ -1,6 +1,13 @@
 {
-  "version": "2.5.0",
+  "version": "2.6.0",
   "changelog": [
+    {
+      "version": "2.6.0",
+      "date": "2025-03-31",
+      "changes": [
+        "Refactored css style for changelog"
+      ]
+    },
     {
       "version": "2.5.0",
       "date": "2025-03-31",
