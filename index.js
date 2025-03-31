@@ -80,7 +80,7 @@ function transformPath(inputPath) {
    /extract endpoint
    Expected input: XML file (.xml)
 ======================== */
-app.post('/extract', (req, res) => {
+app.post('/xmlextract', (req, res) => {
   console.log("=== /extract endpoint called ===");
   console.log("Request body:", req.body);
   let { filePath, xpath } = req.body;
@@ -131,7 +131,7 @@ app.post('/extract', (req, res) => {
    /validate endpoint
    Expected input: XML file (.xml)
 ======================== */
-app.post('/validate', (req, res) => {
+app.post('/xmlvalidate', (req, res) => {
   console.log("=== /validate endpoint called ===");
   console.log("Request body:", req.body);
   let { filePath } = req.body;
@@ -174,7 +174,7 @@ app.post('/validate', (req, res) => {
      - xmlFilePath: XML file (.xml)
      - xsltFilePath: XSLT file (.xslt)
 ======================== */
-app.post('/transform', (req, res) => {
+app.post('/xmltransform', (req, res) => {
   console.log("=== /transform endpoint called ===");
   console.log("Request body:", req.body);
   let { xmlFilePath, xsltFilePath } = req.body;
@@ -225,7 +225,7 @@ app.post('/transform', (req, res) => {
    /format endpoint
    Expected input: XML file (.xml)
 ======================== */
-app.post('/format', (req, res) => {
+app.post('/xmlformat', (req, res) => {
   console.log("=== /format endpoint called ===");
   console.log("Request body:", req.body);
   let { filePath, saveTo, logToConsole } = req.body;
@@ -583,6 +583,87 @@ app.post('/jsonformat', (req, res) => {
     } else {
       res.json({ result: correctedJson });
     }
+  });
+});
+
+/* ========================
+   /jsonextract endpoint
+   Expected input: JSON file (.json) and a key to extract.
+   Functionality: Extracts the value(s) corresponding to the specified key.
+======================== */
+app.post('/jsonextract', (req, res) => {
+  console.log("=== /jsonextract endpoint called ===");
+  console.log("Request body:", req.body);
+  let { filePath, key, logToConsole } = req.body;
+  
+  logToConsole = logToConsole === true;
+  console.log("Received filePath for JSON extraction:", filePath);
+  console.log("Key to extract:", key);
+  
+  // Transform file path for internal mapping
+  filePath = transformPath(filePath);
+  console.log("Transformed filePath for JSON extraction:", filePath);
+  
+  // Check that the input file has a .json extension
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext !== '.json') {
+    console.error(`Invalid input file extension: ${ext}. Expected .json`);
+    return res.status(400).json({ error: 'Invalid input file extension. Expected .json' });
+  }
+  
+  if (!fs.existsSync(filePath)) {
+    console.error(`Source JSON file does not exist at path: ${filePath}`);
+    return res.status(400).json({ error: 'Source JSON file does not exist.' });
+  }
+  
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error("Error reading JSON file:", err);
+      return res.status(500).json({ error: 'Error reading JSON file', details: err.message });
+    }
+    let jsonObj;
+    try {
+      jsonObj = JSON.parse(data);
+    } catch (parseErr) {
+      console.error("Error parsing JSON:", parseErr);
+      return res.status(500).json({ error: 'Error parsing JSON', details: parseErr.message });
+    }
+    
+    // Validate the key parameter
+    if (!key || typeof key !== 'string') {
+      console.error("Invalid key parameter:", key);
+      return res.status(400).json({ error: 'Invalid key parameter.' });
+    }
+    
+    // Recursive function to extract all occurrences of the specified key
+    function extractKey(obj, targetKey) {
+      let results = [];
+      if (typeof obj === 'object' && obj !== null) {
+        if (obj.hasOwnProperty(targetKey)) {
+          results.push(obj[targetKey]);
+        }
+        for (let prop in obj) {
+          if (typeof obj[prop] === 'object') {
+            results = results.concat(extractKey(obj[prop], targetKey));
+          }
+        }
+      }
+      return results;
+    }
+    
+    const extractedValues = extractKey(jsonObj, key);
+    if (logToConsole) {
+      console.log("Extracted values for key", key, ":", extractedValues);
+    }
+    
+    if (extractedValues.length === 0) {
+      console.error("Key not found:", key);
+      return res.status(400).json({ error: `Key '${key}' not found in JSON file.` });
+    }
+    
+    // Return a single value if only one match is found, otherwise return the array of values
+    let resultToReturn = extractedValues.length === 1 ? extractedValues[0] : extractedValues;
+    return res.json({ result: resultToReturn });
   });
 });
 

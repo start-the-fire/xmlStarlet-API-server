@@ -1,6 +1,14 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "changelog": [
+    {
+      "version": "2.2.0",
+      "date": "2025-03-31",
+      "changes": [
+        "Added additional jsonextract endpoint",
+        "Renamed xml endpoints for streamlined naming convention"
+      ]
+    },
     {
       "version": "2.1.0",
       "date": "2025-03-28",
