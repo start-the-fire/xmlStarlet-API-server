@@ -1,6 +1,13 @@
 {
-  "version": "2.3.0",
+  "version": "2.4.0",
   "changelog": [
+    {
+      "version": "2.4.0",
+      "date": "2025-03-31",
+      "changes": [
+        "Version rebased"
+      ]
+    },
     {
       "version": "2.3.0",
       "date": "2025-03-31",
