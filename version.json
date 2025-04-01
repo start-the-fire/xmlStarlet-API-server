@@ -1,6 +1,13 @@
 {
-  "version": "3.0.0",
+  "version": "3.1.0",
   "changelog": [
+    {
+      "version": "3.1.0",
+      "date": "2025-04-01",
+      "changes": [
+        "Fixed swagger documentation for /jsonextract endpoint"
+      ]
+    },
     {
       "version": "3.0.0",
       "date": "2025-04-01",
