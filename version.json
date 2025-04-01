@@ -1,6 +1,13 @@
 {
-  "version": "2.7.0",
+  "version": "3.0.0",
   "changelog": [
+    {
+      "version": "3.0.0",
+      "date": "2025-04-01",
+      "changes": [
+        "Added license validation and free trial period (3 executions)"
+      ]
+    },
     {
       "version": "2.7.0",
       "date": "2025-03-31",

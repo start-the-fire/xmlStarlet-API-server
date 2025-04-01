@@ -11,23 +11,43 @@ const app = express();
 app.use(express.json());
 
 // API Key Middleware
-const API_KEY = process.env.API_KEY || 'Yml0dGUwNDc5';
+const API_KEY = process.env.API_KEY;
+const freeUsageCount = {};  // In-memory store for tracking free usage by IP
+const MAX_FREE_QUERIES = 3;
 app.use((req, res, next) => {
-  // Bypass API key verification for /api and /swagger endpoints
-  if (req.path.startsWith('/api') || req.path.startsWith('/swagger') || req.path.startsWith('/changelog')) {
+  // Bypass API key verification for public endpoints
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/swagger') ||
+    req.path.startsWith('/changelog')
+  ) {
     return next();
   }
-  
-  // For all other endpoints, check the API key
+
   const key = req.headers['x-api-key'];
-  if (!key) {
-    console.error("API key missing");
-    return res.status(403).json({ error: 'Forbidden: API key is missing.' });
+
+  // If a valid API key is provided, allow unlimited usage.
+  if (key === API_KEY) {
+    return next();
   }
-  if (key !== API_KEY) {
+
+  // If a key is provided but it's invalid, reject the request.
+  if (key) {
     console.error("Invalid API key provided:", key);
     return res.status(403).json({ error: 'Forbidden: Invalid API key.' });
   }
+
+  // No API key provided, count this as free usage.
+  const clientIp = req.ip;
+  freeUsageCount[clientIp] = (freeUsageCount[clientIp] || 0) + 1;
+
+  if (freeUsageCount[clientIp] > MAX_FREE_QUERIES) {
+    console.error(`Free usage limit exceeded for IP: ${clientIp}`);
+    return res.status(429).json({
+      error: 'Max query limit reached for free usage. Please provide a valid license key for unlimited access.'
+    });
+  }
+
   next();
 });
 
@@ -72,6 +92,13 @@ if (!fs.existsSync(DOWNLOAD_DIR)) {
   console.log(`Created downloads directory: ${DOWNLOAD_DIR}`);
 }
 app.use('/download', express.static(DOWNLOAD_DIR));
+
+// Check if the API_KEY environment variable is set
+if (process.env.API_KEY) {
+  console.log('Environment variable for API communication available');
+} else {
+  console.log('Environment variable for API communication is missing!');
+}
 
 /**
  * Helper function to transform an incoming file path.

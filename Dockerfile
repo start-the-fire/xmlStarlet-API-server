@@ -1,6 +1,12 @@
 # Use an official Node.js Alpine image
 FROM node:23-alpine
 
+# Declare the build argument
+ARG API_KEY
+
+# Set the environment variable for runtime
+ENV API_KEY=$API_KEY
+
 # Install xmlstarlet via the package manager
 RUN apk add --no-cache xmlstarlet
 
