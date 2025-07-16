@@ -127,53 +127,68 @@ function transformPath(inputPath) {
 }
 
 /* ========================
-   /extract endpoint
-   Expected input: XML file (.xml)
+   /xmlextract endpoint
+   Expected input: 
+     {
+       filePath: string, 
+       xpath: string,
+       asArray?: boolean
+     }
 ======================== */
 app.post('/xmlextract', (req, res) => {
-  console.log("=== /extract endpoint called ===");
+  console.log("=== /xmlextract endpoint called ===");
   console.log("Request body:", req.body);
-  let { filePath, xpath } = req.body;
-  console.log("Received filePath:", filePath);
 
-  // Transform file path for processing
+  let { filePath, xpath, asArray = false } = req.body;
+  console.log("Received filePath:", filePath, "xpath:", xpath, "asArray:", asArray);
+
+  // Transform and validate path
   filePath = transformPath(filePath);
   console.log("Transformed filePath for processing:", filePath);
 
-  // Check file extension (expect .xml)
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== '.xml') {
     console.error(`Invalid input file extension: ${ext}. Expected .xml`);
     return res.status(400).json({ error: 'Invalid input file extension. Expected .xml' });
   }
-
-  // Check if the file exists
   if (!fs.existsSync(filePath)) {
     console.error(`File does not exist at path: ${filePath}`);
     return res.status(400).json({ error: 'File does not exist.' });
   }
-
-  // Validate XPath length
   if (!xpath || typeof xpath !== 'string' || xpath.length > 200) {
     console.error("Invalid XPath expression:", xpath);
     return res.status(400).json({ error: 'Invalid XPath expression.' });
   }
 
-  // Execute xmlstarlet extraction
+  // Run xmlstarlet
   const args = ['sel', '-t', '-v', xpath, filePath];
   console.log("Executing xmlstarlet with args:", args);
   const child = spawn('xmlstarlet', args);
+
   let output = '';
   let errorOutput = '';
-  child.stdout.on('data', (data) => { output += data; });
-  child.stderr.on('data', (data) => { errorOutput += data; });
-  child.on('close', (code) => {
+  child.stdout.on('data', data => { output += data; });
+  child.stderr.on('data', data => { errorOutput += data; });
+
+  child.on('close', code => {
     if (code !== 0) {
       console.error(`xmlstarlet exited with code ${code}: ${errorOutput}`);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
-    console.log("Extraction successful. Output:", output.trim());
-    res.json({ result: output.trim() });
+
+    const trimmed = output.trim();
+    console.log("Extraction successful. Raw output:", trimmed);
+
+    if (asArray) {
+      // split on newlines, filter out any empty strings
+      const arr = trimmed === ''
+        ? []
+        : trimmed.split(/\r?\n/).filter(line => line.length > 0);
+      console.log("Returning as array:", arr);
+      return res.json({ result: arr });
+    } else {
+      return res.json({ result: trimmed });
+    }
   });
 });
 
@@ -348,6 +363,70 @@ app.post('/xmlformat', (req, res) => {
       console.log("Returning formatted XML in response.");
       res.json({ result: output });
     }
+  });
+});
+
+/* ========================
+   /removedtp endpoint
+   Expected input: XML file (.xml)
+======================== */
+app.post('/removedtp', (req, res) => {
+  console.log("=== /removedtp endpoint called ===");
+  console.log("Request body:", req.body);
+
+  let { filePath } = req.body;
+  console.log("Received filePath:", filePath);
+
+  // apply the same transformPath logic you use elsewhere
+  filePath = transformPath(filePath);
+  console.log("Transformed filePath for processing:", filePath);
+
+  // must be .xml
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext !== '.xml') {
+    console.error(`Invalid input file extension: ${ext}. Expected .xml`);
+    return res.status(400).json({ error: 'Invalid input file extension. Expected .xml' });
+  }
+
+  // must exist
+  if (!fs.existsSync(filePath)) {
+    console.error(`File does not exist at path: ${filePath}`);
+    return res.status(400).json({ error: 'File does not exist.' });
+  }
+
+  // build output path
+  const dir       = path.dirname(filePath);
+  const baseName  = path.basename(filePath, ext);
+  const outName   = `${baseName}_removedDTP.xml`;
+  const outPath   = path.join(dir, outName);
+
+  // spawn iconv → xmllint → write file
+  // iconv -f UTF-16 -t UTF-8 <in> | xmllint --dropdtd - > <out>
+  const iconv = spawn('iconv', ['-f','UTF-16','-t','UTF-8', filePath]);
+  const xmllint = spawn('xmllint', ['--dropdtd', '-']);
+  const outStream = fs.createWriteStream(outPath);
+
+  // pipe the streams
+  iconv.stdout.pipe(xmllint.stdin);
+  xmllint.stdout.pipe(outStream);
+
+  let errors = '';
+  iconv.stderr.on('data', data => { errors += data; });
+  xmllint.stderr.on('data', data => { errors += data; });
+
+  xmllint.on('close', code => {
+    if (code !== 0) {
+      console.error('Error stripping DTD:', errors.trim());
+      return res.status(500).json({
+        error:   'Failed to remove DTD and re-encode file.',
+        details: errors.trim(),
+      });
+    }
+    console.log(`Successfully wrote ${outPath}`);
+    res.json({
+      inputFile:  path.basename(filePath),
+      outputFile: outName,
+    });
   });
 });
 

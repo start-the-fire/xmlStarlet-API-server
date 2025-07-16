@@ -1,7 +1,7 @@
-openapi: 3.0.0
+openapi: 3.1.1
 info:
   title: XML-JSON Gateway API
-  version: "3.1.0"
+  version: "4.1.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
@@ -42,7 +42,7 @@ paths:
         Evaluates a provided XPath expression against an XML file. The API transforms the provided file path 
         to its internal storage location and returns the extracted value.
       requestBody:
-        description: JSON payload containing the XML file path and the XPath expression.
+        description: JSON payload containing the XML file path, the XPath expression, and an optional toggle.
         required: true
         content:
           application/json:
@@ -58,6 +58,12 @@ paths:
                   type: string
                   description: The XPath expression to evaluate.
                   example: "count(//OM_RECORD)"
+                asArray:
+                  type: boolean
+                  description: >
+                    If true, splits results on newlines and returns them as an array of strings.
+                    Defaults to false (single string result).
+                  example: false
               required:
                 - filePath
                 - xpath
@@ -70,10 +76,15 @@ paths:
                 type: object
                 properties:
                   result:
-                    type: string
-                    description: The extracted value.
+                    oneOf:
+                      - type: string
+                      - type: array
+                        items:
+                          type: string
+                    description: >
+                      The extracted value, either as a single newline-delimited string or an array of strings if `asArray` was true.
         '400':
-          description: Invalid input, file not found, or wrong file extension.
+          description: Invalid input, file not found, wrong extension, or bad XPath.
           content:
             application/json:
               schema:
@@ -266,6 +277,63 @@ paths:
                     type: string
         '500':
           description: Formatting error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: string
+  /removedtp:
+    post:
+      tags:
+        - "XML Operations"
+      summary: Remove DTD from XML and save new file
+      description: >
+        Strips out the DOCTYPE declaration from an XML file, re-encodes it from UTF-16 to UTF-8,
+        and writes the cleaned XML to a new file with the `_removedDTP.xml` suffix.
+      requestBody:
+        description: JSON payload containing the XML file path to process.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filePath:
+                  type: string
+                  description: >
+                    The path of the XML file to process. Automatically mapped to internal storage.
+                  example: "/Volumes/Helmut/helmut480-test/example.xml"
+              required:
+                - filePath
+      responses:
+        '200':
+          description: DTD removal successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inputFile:
+                    type: string
+                    description: The original XML filename.
+                  outputFile:
+                    type: string
+                    description: The new filename with `_removedDTP.xml` suffix.
+        '400':
+          description: Invalid file path, file not found, or wrong extension.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Error during DTD removal.
           content:
             application/json:
               schema:

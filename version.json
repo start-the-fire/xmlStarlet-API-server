@@ -1,6 +1,22 @@
 {
-  "version": "3.1.0",
+  "version": "4.1.0",
   "changelog": [
+    {
+      "version": "4.1.0",
+      "date": "2025-07-16",
+      "changes": [
+        "Updated alpine to version 24"
+      ]
+    },
+    {
+      "version": "4.0.0",
+      "date": "2025-07-16",
+      "changes": [
+        "Added new endpoint /removedtd to remove DTD from XML files via UTF-8 encoding",
+        "Refactored /extractxml endpoint to return result as json array",
+        "Updated jsonrepair & fast-xml-parser to latest versions"
+      ]
+    },
     {
       "version": "3.1.0",
       "date": "2025-04-01",

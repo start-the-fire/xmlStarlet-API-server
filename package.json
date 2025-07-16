@@ -20,8 +20,8 @@
   "homepage": "https://github.com/start-the-fire/xmlStarlet-API-server#readme",
   "dependencies": {
     "express": "^5.1.0",
-    "fast-xml-parser": "^5.0.9",
-    "jsonrepair": "^3.12.0",
+    "fast-xml-parser": "^5.2.5",
+    "jsonrepair": "^3.13.0",
     "swagger-ui-express": "^5.0.1",
     "yamljs": "^0.3.0"
   }
