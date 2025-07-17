@@ -6,7 +6,7 @@ const YAML = require('yamljs');
 const swaggerUi = require('swagger-ui-express');
 const { XMLParser, XMLBuilder } = require("fast-xml-parser");
 const { jsonrepair } = require('jsonrepair');
-const XmlStream = require('xml-stream');
+const sax  = require('sax');
 
 const app = express();
 app.use(express.json());
@@ -469,69 +469,104 @@ app.post('/xmltojson', (req, res) => {
   console.log("=== /xmltojson endpoint called ===");
   console.log("Request body:", req.body);
   let { filePath, saveTo, logToConsole } = req.body;
-  
   logToConsole = logToConsole === true;
-  console.log("logToConsole is set to:", logToConsole);
-  console.log("Received filePath for XML to JSON conversion:", filePath);
-  if (saveTo) console.log("Received saveTo path:", saveTo);
-  
+  console.log("logToConsole:", logToConsole);
+  if (saveTo) console.log("saveTo:", saveTo);
+
+  // 1) Transform & validate
   filePath = transformPath(filePath);
-  console.log("Transformed filePath for XML to JSON conversion:", filePath);
-  
-  // Check extension for input file (expect .xml)
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext !== '.xml') {
-    console.error(`Invalid input file extension: ${ext}. Expected .xml`);
-    return res.status(400).json({ error: 'Invalid input file extension. Expected .xml' });
+  console.log("Resolved filePath:", filePath);
+  if (!filePath.toLowerCase().endsWith('.xml')) {
+    return res.status(400).json({ error: 'Invalid extension, expected .xml' });
   }
-  
   if (!fs.existsSync(filePath)) {
-    console.error(`Source XML file does not exist at path: ${filePath}`);
     return res.status(400).json({ error: 'Source XML file does not exist.' });
   }
-  
-  // If saveTo is provided, check that its extension is ".json"
-  if (saveTo && saveTo.trim() !== "") {
-    const saveExt = path.extname(saveTo).toLowerCase();
-    if (saveExt !== ".json") {
-      console.error(`Invalid saveTo file extension: ${saveExt}. Expected .json`);
-      return res.status(400).json({ error: 'Invalid saveTo file extension. Expected .json for XML to JSON conversion.' });
-    }
+  if (saveTo && !saveTo.toLowerCase().endsWith('.json')) {
+    return res.status(400).json({ error: 'Invalid saveTo extension, expected .json' });
   }
-  
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error("Error reading XML file:", err);
-      return res.status(500).json({ error: 'Error reading XML file', details: err.message });
+
+  // 2) Prepare SAX parser
+  const strict  = true;
+  const parser  = sax.createStream(strict, { trim: true, normalize: true });
+  const records = [];
+  let currentRecord = null;
+  let currentField  = null;
+
+  parser.on('opentag', node => {
+    // start a new record
+    if (node.name === 'OM_RECORD') {
+      currentRecord = {};
     }
-    let jsonObj;
-    try {
-      const parser = new XMLParser();
-      jsonObj = parser.parse(data);
-    } catch (parseErr) {
-      console.error("Error parsing XML:", parseErr);
-      return res.status(500).json({ error: 'Error parsing XML', details: parseErr.message });
-    }
-    const jsonOutput = JSON.stringify(jsonObj, null, 2);
-    if (logToConsole) console.log("Converted JSON output:\n", jsonOutput);
-    if (saveTo && saveTo.trim() !== "") {
-      const downloadFileName = path.basename(saveTo);
-      const downloadFilePath = path.join(DOWNLOAD_DIR, downloadFileName);
-      fs.writeFile(downloadFilePath, jsonOutput, (err) => {
-        if (err) {
-          console.error("Error writing JSON file:", err);
-          return res.status(500).json({ error: 'Failed to save JSON file', details: err.message });
-        }
-        console.log(`Converted JSON saved internally as ${downloadFilePath}`);
-        const host = req.get('host');
-        const protocol = req.protocol;
-        const downloadUrl = `${protocol}://${host}/download/${downloadFileName}`;
-        res.json({ message: "Converted JSON saved internally.", downloadUrl });
-      });
-    } else {
-      res.json({ result: jsonOutput });
+    // inside a record, capture each <OM_FIELD FieldName="X" IsEmpty="Y">…text…</OM_FIELD>
+    else if (currentRecord && node.name === 'OM_FIELD') {
+      const name = node.attributes.FieldName;
+      currentField = name;
+      // initialize field in record
+      currentRecord[name] = '';
     }
   });
+
+  parser.on('text', text => {
+    if (currentRecord && currentField) {
+      currentRecord[currentField] += text;
+    }
+  });
+
+  parser.on('closetag', tag => {
+    if (tag === 'OM_FIELD') {
+      currentField = null;
+    }
+    else if (tag === 'OM_RECORD') {
+      records.push(currentRecord);
+      if (logToConsole) console.log('Parsed record:', currentRecord);
+      currentRecord = null;
+    }
+  });
+
+  parser.on('error', err => {
+    console.error('SAX parse error:', err);
+    return res.status(500).json({ error: 'XML parse error', details: err.message });
+  });
+
+  parser.on('end', () => {
+    // 3) Finished parsing, now serialize
+    const jsonOutput = JSON.stringify(records, null, 2);
+
+    // 4a) saveTo → write file + return URL
+    if (saveTo && saveTo.trim()) {
+      const outName = path.basename(saveTo);
+      const outPath = path.join(DOWNLOAD_DIR, outName);
+      fs.writeFile(outPath, jsonOutput, err => {
+        if (err) {
+          console.error('Write error:', err);
+          return res.status(500).json({ error: 'Failed to save JSON', details: err.message });
+        }
+        console.log(`Saved JSON to ${outPath}`);
+        const url = `${req.protocol}://${req.get('host')}/download/${outName}`;
+        return res.json({ message: 'Conversion complete.', downloadUrl: url });
+      });
+    } else {
+      // 4b) no saveTo → return in response
+      return res.json({ result: jsonOutput });
+    }
+  });
+
+  // 5) Kick off the stream
+  const { spawn } = require('child_process');
+const iconv = spawn('iconv', ['-f', 'UTF-16', '-t', 'UTF-8', filePath]);
+
+iconv.stderr.on('data', chunk => {
+  console.error('iconv error:', chunk.toString());
+});
+
+iconv.on('error', err => {
+  console.error('Failed to start iconv:', err);
+  return res.status(500).json({ error: 'Transcoding error', details: err.message });
+});
+
+// Pipe the UTF-8 output into the SAX parser
+iconv.stdout.pipe(parser);
 });
 
 /* ========================

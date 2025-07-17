@@ -1,6 +1,13 @@
 {
-  "version": "4.2.2",
+  "version": "4.3.0",
   "changelog": [
+    {
+      "version": "4.3.0",
+      "date": "2025-07-17",
+      "changes": [
+        "Fixed previous /xmltojson endpoint to use sax for xml parsing of big xml files"
+      ]
+    },
     {
       "version": "4.2.2",
       "date": "2025-07-17",

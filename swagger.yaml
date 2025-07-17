@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: XML-JSON Gateway API
-  version: "4.2.0"
+  version: "4.3.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
@@ -53,7 +53,7 @@ paths:
                   type: string
                   description: >
                     The file path of the XML file. The API maps this to internal storage automatically.
-                  example: "/Volumes/Helmut/helmut480-test/A.xml"
+                  example: "/Volumes/myShare/A.xml"
                 xpath:
                   type: string
                   description: The XPath expression to evaluate.
@@ -120,7 +120,7 @@ paths:
                   type: string
                   description: >
                     The XML file path. The API maps this to internal storage automatically.
-                  example: "/Volumes/Helmut/helmut480-test/A.xml"
+                  example: "/Volumes/myShare/A.xml"
               required:
                 - filePath
       responses:
@@ -172,12 +172,12 @@ paths:
                   type: string
                   description: >
                     The source XML file path. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/A.xml"
+                  example: "/Volumes/myShare/A.xml"
                 xsltFilePath:
                   type: string
                   description: >
                     The XSLT file path. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/style.xslt"
+                  example: "/Volumes/myShare/style.xslt"
               required:
                 - xmlFilePath
                 - xsltFilePath
@@ -233,7 +233,7 @@ paths:
                   type: string
                   description: >
                     The XML file path to format. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/A.xml"
+                  example: "/Volumes/myShare/A.xml"
                 saveTo:
                   type: string
                   description: >
@@ -305,7 +305,7 @@ paths:
                 filePath:
                   type: string
                   description: The path of the XML file to process. Mapped to internal storage.
-                  example: "/Volumes/helmut_1/file.xml"
+                  example: "/Volumes/myShare/file.xml"
                 saveTo:
                   type: string
                   description: >
@@ -388,7 +388,7 @@ paths:
                   type: string
                   description: >
                     The XML file path to convert. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/A.xml"
+                  example: "/Volumes/myShare/A.xml"
                 saveTo:
                   type: string
                   description: >
@@ -462,7 +462,7 @@ paths:
                   type: string
                   description: >
                     The JSON file path to convert. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/A.json"
+                  example: "/Volumes/myShare/A.json"
                 saveTo:
                   type: string
                   description: >
@@ -537,7 +537,7 @@ paths:
                 filePath:
                   type: string
                   description: The JSON file path to extract from.
-                  example: "/Volumes/helmut_1/valid.json"
+                  example: "/Volumes/myShare/valid.json"
                 key:
                   type: string
                   description: The key to search for in the JSON file.
@@ -611,7 +611,7 @@ paths:
                   type: string
                   description: >
                     The JSON file path to verify. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/A.json"
+                  example: "/Volumes/myShare/A.json"
                 logToConsole:
                   type: boolean
                   description: >
@@ -668,7 +668,7 @@ paths:
                   type: string
                   description: >
                     The JSON file path to format/correct. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/A.json"
+                  example: "/Volumes/myShare/A.json"
                 saveTo:
                   type: string
                   description: >
