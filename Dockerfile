@@ -20,9 +20,9 @@ WORKDIR /app
 ENV LD_PRELOAD=/usr/lib/preloadable_libiconv.so
 
 # Copy package files and install dependencies
-COPY package.json package-lock.json* ./
+COPY package.json ./
 #RUN npm install
-RUN npm install --production --legacy-peer-deps
+RUN npm install --production
 
 # Copy the rest of the application code
 COPY . .
