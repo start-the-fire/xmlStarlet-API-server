@@ -472,21 +472,25 @@ app.post('/xmltojson', (req, res) => {
   
   logToConsole = logToConsole === true;
   console.log("logToConsole is set to:", logToConsole);
+  console.log("Received filePath for XML to JSON conversion:", filePath);
   if (saveTo) console.log("Received saveTo path:", saveTo);
   
-  // 1) transform & validate paths
   filePath = transformPath(filePath);
   console.log("Transformed filePath for XML to JSON conversion:", filePath);
+  
+  // Check extension for input file (expect .xml)
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== '.xml') {
     console.error(`Invalid input file extension: ${ext}. Expected .xml`);
     return res.status(400).json({ error: 'Invalid input file extension. Expected .xml' });
   }
+  
   if (!fs.existsSync(filePath)) {
     console.error(`Source XML file does not exist at path: ${filePath}`);
     return res.status(400).json({ error: 'Source XML file does not exist.' });
   }
   
+  // If saveTo is provided, check that its extension is ".json"
   if (saveTo && saveTo.trim() !== "") {
     const saveExt = path.extname(saveTo).toLowerCase();
     if (saveExt !== ".json") {
@@ -494,33 +498,26 @@ app.post('/xmltojson', (req, res) => {
       return res.status(400).json({ error: 'Invalid saveTo file extension. Expected .json for XML to JSON conversion.' });
     }
   }
-
-  // 2) set up xml‐stream
-  const stream   = fs.createReadStream(filePath);
-  const xml      = new XmlStream(stream);
-  // collect all child <OM_FIELD> nodes under each <OM_RECORD>
-  xml.collect('OM_FIELD');
   
-  const records = [];
-  xml.on('endElement: OM_RECORD', record => {
-    records.push(record);
-    if (logToConsole) console.log("Parsed OM_RECORD:", record);
-  });
-  
-  xml.on('error', err => {
-    console.error("XML stream error:", err);
-    return res.status(500).json({ error: 'XML parse error', details: err.message });
-  });
-  
-  xml.on('end', () => {
-    // fully parsed all records
-    const jsonOutput = JSON.stringify(records, null, 2);
-    
-    // 3a) if saveTo, write file and return URL
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error("Error reading XML file:", err);
+      return res.status(500).json({ error: 'Error reading XML file', details: err.message });
+    }
+    let jsonObj;
+    try {
+      const parser = new XMLParser();
+      jsonObj = parser.parse(data);
+    } catch (parseErr) {
+      console.error("Error parsing XML:", parseErr);
+      return res.status(500).json({ error: 'Error parsing XML', details: parseErr.message });
+    }
+    const jsonOutput = JSON.stringify(jsonObj, null, 2);
+    if (logToConsole) console.log("Converted JSON output:\n", jsonOutput);
     if (saveTo && saveTo.trim() !== "") {
       const downloadFileName = path.basename(saveTo);
       const downloadFilePath = path.join(DOWNLOAD_DIR, downloadFileName);
-      fs.writeFile(downloadFilePath, jsonOutput, err => {
+      fs.writeFile(downloadFilePath, jsonOutput, (err) => {
         if (err) {
           console.error("Error writing JSON file:", err);
           return res.status(500).json({ error: 'Failed to save JSON file', details: err.message });
@@ -529,11 +526,10 @@ app.post('/xmltojson', (req, res) => {
         const host = req.get('host');
         const protocol = req.protocol;
         const downloadUrl = `${protocol}://${host}/download/${downloadFileName}`;
-        return res.json({ message: "Converted JSON saved internally.", downloadUrl });
+        res.json({ message: "Converted JSON saved internally.", downloadUrl });
       });
     } else {
-      // 3b) otherwise, return the JSON string
-      return res.json({ result: jsonOutput });
+      res.json({ result: jsonOutput });
     }
   });
 });
