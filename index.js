@@ -6,6 +6,7 @@ const YAML = require('yamljs');
 const swaggerUi = require('swagger-ui-express');
 const { XMLParser, XMLBuilder } = require("fast-xml-parser");
 const { jsonrepair } = require('jsonrepair');
+const XmlStream = require('xml-stream');
 
 const app = express();
 app.use(express.json());
@@ -368,64 +369,94 @@ app.post('/xmlformat', (req, res) => {
 
 /* ========================
    /removedtp endpoint
-   Expected input: XML file (.xml)
+   Expected input: 
+     {
+       filePath:   string,
+       saveTo?:    string,
+       logToConsole?: boolean,
+       viaUrl?:    boolean      // ← NEW: default false
+     }
 ======================== */
 app.post('/removedtp', (req, res) => {
   console.log("=== /removedtp endpoint called ===");
   console.log("Request body:", req.body);
 
-  let { filePath } = req.body;
-  console.log("Received filePath:", filePath);
+  let { filePath, saveTo, logToConsole, viaUrl = false } = req.body;
+  logToConsole = logToConsole === true;
+  console.log("logToConsole:", logToConsole, "viaUrl:", viaUrl);
 
-  // apply the same transformPath logic you use elsewhere
+  // 1) Transform & validate
   filePath = transformPath(filePath);
-  console.log("Transformed filePath for processing:", filePath);
-
-  // must be .xml
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext !== '.xml') {
-    console.error(`Invalid input file extension: ${ext}. Expected .xml`);
-    return res.status(400).json({ error: 'Invalid input file extension. Expected .xml' });
+  console.log("Transformed filePath:", filePath);
+  if (!filePath.toLowerCase().endsWith('.xml')) {
+    return res.status(400).json({ error: 'Invalid input extension; expected .xml' });
   }
-
-  // must exist
   if (!fs.existsSync(filePath)) {
-    console.error(`File does not exist at path: ${filePath}`);
-    return res.status(400).json({ error: 'File does not exist.' });
+    return res.status(400).json({ error: 'Source XML file does not exist.' });
   }
 
-  // build output path
-  const dir       = path.dirname(filePath);
-  const baseName  = path.basename(filePath, ext);
-  const outName   = `${baseName}_removedDTP.xml`;
-  const outPath   = path.join(dir, outName);
+  // 2) Decide output directory
+  const baseName = path.basename(filePath, '.xml');
+  const outputName = (saveTo && saveTo.trim()) 
+    ? path.basename(saveTo) 
+    : `${baseName}_removedDTP.xml`;
+  const outputDir = viaUrl 
+    ? DOWNLOAD_DIR               // serveable URL dir
+    : path.dirname(filePath);    // alongside source
+  const outputPath = path.join(outputDir, outputName);
 
-  // spawn iconv → xmllint → write file
-  // iconv -f UTF-16 -t UTF-8 <in> | xmllint --dropdtd - > <out>
-  const iconv = spawn('iconv', ['-f','UTF-16','-t','UTF-8', filePath]);
-  const xmllint = spawn('xmllint', ['--dropdtd', '-']);
-  const outStream = fs.createWriteStream(outPath);
+  // 3) Run xmllint → writes directly via --output
+  const args = [
+    '--dropdtd',
+    '--recover',
+    '--encode', 'UTF-8',
+    '--output', outputPath,
+    filePath
+  ];
+  console.log('xmllint args:', args.join(' '));
+  const child = spawn('xmllint', args);
 
-  // pipe the streams
-  iconv.stdout.pipe(xmllint.stdin);
-  xmllint.stdout.pipe(outStream);
+  let stderr = '';
+  child.stderr.on('data', d => stderr += d);
 
-  let errors = '';
-  iconv.stderr.on('data', data => { errors += data; });
-  xmllint.stderr.on('data', data => { errors += data; });
-
-  xmllint.on('close', code => {
+  child.on('close', code => {
     if (code !== 0) {
-      console.error('Error stripping DTD:', errors.trim());
+      console.error('xmllint failed:', stderr.trim());
       return res.status(500).json({
-        error:   'Failed to remove DTD and re-encode file.',
-        details: errors.trim(),
+        error:   'Failed to strip DTD and write file.',
+        details: stderr.trim()
       });
     }
-    console.log(`Successfully wrote ${outPath}`);
-    res.json({
+
+    // sanity‐check zero‐byte
+    try {
+      const stats = fs.statSync(outputPath);
+      if (stats.size === 0) throw new Error('zero-length');
+    } catch (err) {
+      console.error('Output file error:', err);
+      return res.status(500).json({
+        error: 'Output file is empty or inaccessible.'
+      });
+    }
+
+    // 4a) viaUrl → return download URL
+    if (viaUrl) {
+      const host = req.get('host');
+      const proto = req.protocol;
+      const downloadUrl = `${proto}://${host}/download/${outputName}`;
+      console.log(`Saved to ${outputPath}, URL: ${downloadUrl}`);
+      return res.json({
+        message:     'Cleaned XML saved internally.',
+        downloadUrl,
+        outputFile:  outputName
+      });
+    }
+
+    // 4b) default → return filenames only
+    console.log(`Saved alongside source: ${outputPath}`);
+    return res.json({
       inputFile:  path.basename(filePath),
-      outputFile: outName,
+      outputFile: outputName
     });
   });
 });
@@ -441,25 +472,21 @@ app.post('/xmltojson', (req, res) => {
   
   logToConsole = logToConsole === true;
   console.log("logToConsole is set to:", logToConsole);
-  console.log("Received filePath for XML to JSON conversion:", filePath);
   if (saveTo) console.log("Received saveTo path:", saveTo);
   
+  // 1) transform & validate paths
   filePath = transformPath(filePath);
   console.log("Transformed filePath for XML to JSON conversion:", filePath);
-  
-  // Check extension for input file (expect .xml)
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== '.xml') {
     console.error(`Invalid input file extension: ${ext}. Expected .xml`);
     return res.status(400).json({ error: 'Invalid input file extension. Expected .xml' });
   }
-  
   if (!fs.existsSync(filePath)) {
     console.error(`Source XML file does not exist at path: ${filePath}`);
     return res.status(400).json({ error: 'Source XML file does not exist.' });
   }
   
-  // If saveTo is provided, check that its extension is ".json"
   if (saveTo && saveTo.trim() !== "") {
     const saveExt = path.extname(saveTo).toLowerCase();
     if (saveExt !== ".json") {
@@ -467,26 +494,33 @@ app.post('/xmltojson', (req, res) => {
       return res.status(400).json({ error: 'Invalid saveTo file extension. Expected .json for XML to JSON conversion.' });
     }
   }
+
+  // 2) set up xml‐stream
+  const stream   = fs.createReadStream(filePath);
+  const xml      = new XmlStream(stream);
+  // collect all child <OM_FIELD> nodes under each <OM_RECORD>
+  xml.collect('OM_FIELD');
   
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error("Error reading XML file:", err);
-      return res.status(500).json({ error: 'Error reading XML file', details: err.message });
-    }
-    let jsonObj;
-    try {
-      const parser = new XMLParser();
-      jsonObj = parser.parse(data);
-    } catch (parseErr) {
-      console.error("Error parsing XML:", parseErr);
-      return res.status(500).json({ error: 'Error parsing XML', details: parseErr.message });
-    }
-    const jsonOutput = JSON.stringify(jsonObj, null, 2);
-    if (logToConsole) console.log("Converted JSON output:\n", jsonOutput);
+  const records = [];
+  xml.on('endElement: OM_RECORD', record => {
+    records.push(record);
+    if (logToConsole) console.log("Parsed OM_RECORD:", record);
+  });
+  
+  xml.on('error', err => {
+    console.error("XML stream error:", err);
+    return res.status(500).json({ error: 'XML parse error', details: err.message });
+  });
+  
+  xml.on('end', () => {
+    // fully parsed all records
+    const jsonOutput = JSON.stringify(records, null, 2);
+    
+    // 3a) if saveTo, write file and return URL
     if (saveTo && saveTo.trim() !== "") {
       const downloadFileName = path.basename(saveTo);
       const downloadFilePath = path.join(DOWNLOAD_DIR, downloadFileName);
-      fs.writeFile(downloadFilePath, jsonOutput, (err) => {
+      fs.writeFile(downloadFilePath, jsonOutput, err => {
         if (err) {
           console.error("Error writing JSON file:", err);
           return res.status(500).json({ error: 'Failed to save JSON file', details: err.message });
@@ -495,10 +529,11 @@ app.post('/xmltojson', (req, res) => {
         const host = req.get('host');
         const protocol = req.protocol;
         const downloadUrl = `${protocol}://${host}/download/${downloadFileName}`;
-        res.json({ message: "Converted JSON saved internally.", downloadUrl });
+        return res.json({ message: "Converted JSON saved internally.", downloadUrl });
       });
     } else {
-      res.json({ result: jsonOutput });
+      // 3b) otherwise, return the JSON string
+      return res.json({ result: jsonOutput });
     }
   });
 });

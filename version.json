@@ -1,6 +1,15 @@
 {
-  "version": "4.1.0",
+  "version": "4.2.0",
   "changelog": [
+    {
+      "version": "4.2.0",
+      "date": "2025-07-17",
+      "changes": [
+        "Resolved an issue with the /removedtd endpoint regarding UTF-8 encoding",
+        "New files via /removedtd endpoint are now normalized",
+        "Adopted /xmltojson endpoint to use more efficent xml-stream library"
+      ]
+    },
     {
       "version": "4.1.0",
       "date": "2025-07-16",

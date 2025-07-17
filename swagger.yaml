@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: XML-JSON Gateway API
-  version: "4.1.0"
+  version: "4.2.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
@@ -290,12 +290,12 @@ paths:
     post:
       tags:
         - "XML Operations"
-      summary: Remove DTD from XML and save new file
+      summary: Remove DTD from XML and save cleaned file
       description: >
         Strips out the DOCTYPE declaration from an XML file, re-encodes it from UTF-16 to UTF-8,
-        and writes the cleaned XML to a new file with the `_removedDTP.xml` suffix.
+        and either returns the cleaned XML or saves it internally.
       requestBody:
-        description: JSON payload containing the XML file path to process.
+        description: JSON payload containing the XML file path, optional file naming and flags.
         required: true
         content:
           application/json:
@@ -304,9 +304,24 @@ paths:
               properties:
                 filePath:
                   type: string
+                  description: The path of the XML file to process. Mapped to internal storage.
+                  example: "/Volumes/helmut_1/file.xml"
+                saveTo:
+                  type: string
                   description: >
-                    The path of the XML file to process. Automatically mapped to internal storage.
-                  example: "/Volumes/Helmut/helmut480-test/example.xml"
+                    Optional filename (with `.xml`) for the cleaned output. 
+                    If omitted, defaults to `<original>_removedDTP.xml`.
+                  example: "file_removedDTP.xml"
+                logToConsole:
+                  type: boolean
+                  description: If true, prints the cleaned XML to the server console.
+                  example: false
+                viaUrl:
+                  type: boolean
+                  description: >
+                    If true, saves the cleaned XML into the download directory and returns a download URL.
+                    If false (default), writes the cleaned file alongside the source.
+                  example: false
               required:
                 - filePath
       responses:
@@ -317,14 +332,23 @@ paths:
               schema:
                 type: object
                 properties:
+                  result:
+                    type: string
+                    description: The cleaned XML (if `viaUrl` is false and no `saveTo`).
+                  message:
+                    type: string
+                    description: Confirmation message (if file was saved).
+                  downloadUrl:
+                    type: string
+                    description: URL to download the cleaned XML (if `viaUrl` true).
                   inputFile:
                     type: string
-                    description: The original XML filename.
+                    description: The original XML filename (when `viaUrl` false).
                   outputFile:
                     type: string
-                    description: The new filename with `_removedDTP.xml` suffix.
+                    description: The cleaned XML filename.
         '400':
-          description: Invalid file path, file not found, or wrong extension.
+          description: Invalid input, file not found, or wrong extension.
           content:
             application/json:
               schema:
@@ -333,7 +357,7 @@ paths:
                   error:
                     type: string
         '500':
-          description: Error during DTD removal.
+          description: Error during DTD removal or file write.
           content:
             application/json:
               schema:
