@@ -1,6 +1,13 @@
 {
-  "version": "4.3.0",
+  "version": "4.4.0",
   "changelog": [
+    {
+      "version": "4.4.0",
+      "date": "2025-07-18",
+      "changes": [
+        "Streamlined endpoints to provide download links for files or creation nxt to source file"
+      ]
+    },
     {
       "version": "4.3.0",
       "date": "2025-07-17",

@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: XML-JSON Gateway API
-  version: "4.3.0"
+  version: "4.4.0"
   description: >
     The XML-JSON Gateway API is a comprehensive service designed to facilitate data exchange 
     and conversion between XML and JSON formats. It provides endpoints to extract data from XML 
@@ -213,79 +213,92 @@ paths:
                   details:
                     type: string
   /xmlformat:
-    post:
-      tags:
-        - "XML Operations"
-      summary: Format XML File
-      description: >
-        Formats (pretty-prints) an XML file to improve readability. The API transforms the file path internally. 
-        If a "saveTo" parameter is provided, the formatted XML is saved internally and a download URL is returned; 
-        otherwise, the formatted XML is returned in the response.
-      requestBody:
-        description: JSON payload with the XML file path, an optional saveTo filename, and an optional logToConsole flag.
-        required: true
+  post:
+    tags:
+      - "XML Operations"
+    summary: Format XML File
+    description: >
+      Formats (pretty-prints) an XML file to improve readability. The API transforms the file path internally.
+      If a `saveTo` parameter is provided (with a `.xml` extension), the formatted XML is saved internally and a download URL is returned.
+      Optionally, set `viaUrl` to save the formatted XML in the download directory; defaults to saving alongside the source file.
+    requestBody:
+      description: JSON payload containing the XML file path, optional file naming and flags.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              filePath:
+                type: string
+                description: >
+                  The XML file path to format. Automatically mapped to internal storage.
+                example: "/Volumes/myShare/A.xml"
+              saveTo:
+                type: string
+                description: >
+                  Optional. Desired filename for the formatted XML (must end in `.xml`).  
+                  If omitted, defaults to `<original>_formatted.xml`.
+                example: "A_formatted.xml"
+              logToConsole:
+                type: boolean
+                description: >
+                  Optional. If true, prints the formatted XML to the server console.
+                example: false
+              viaUrl:
+                type: boolean
+                description: >
+                  Optional. If true, saves the formatted XML in the download directory and returns a download URL.
+                  If false (default), saves alongside the source file.
+                example: false
+            required:
+              - filePath
+    responses:
+      '200':
+        description: XML formatting successful.
         content:
           application/json:
             schema:
               type: object
               properties:
-                filePath:
+                result:
                   type: string
                   description: >
-                    The XML file path to format. Automatically mapped to internal storage.
-                  example: "/Volumes/myShare/A.xml"
-                saveTo:
+                    The formatted XML (if no file was saved).
+                message:
                   type: string
                   description: >
-                    Optional. Desired filename for the formatted XML. If provided, the file is saved internally and a download URL is returned.
-                  example: "A_formatted.xml"
-                logToConsole:
-                  type: boolean
+                    Confirmation message (if a file was saved).
+                downloadUrl:
+                  type: string
                   description: >
-                    Optional. If true, prints the formatted XML to the server console.
-                  example: false
-              required:
-                - filePath
-      responses:
-        '200':
-          description: XML formatting successful.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: string
-                    description: >
-                      The formatted XML (if "saveTo" is not provided).
-                  message:
-                    type: string
-                    description: >
-                      Confirmation message if the formatted XML was saved internally.
-                  downloadUrl:
-                    type: string
-                    description: >
-                      URL to download the formatted XML file (if "saveTo" is provided).
-        '400':
-          description: Invalid file path, file not found, or incorrect file extension.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-        '500':
-          description: Formatting error.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  details:
-                    type: string
+                    URL to download the formatted XML file (if `saveTo` or `viaUrl` was used).
+                inputFile:
+                  type: string
+                  description: The original XML filename (when saving to disk).
+                outputFile:
+                  type: string
+                  description: The filename under which the formatted XML was saved.
+      '400':
+        description: Invalid file path, file not found, or incorrect file extension.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+      '500':
+        description: Formatting error.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                details:
+                  type: string
   /removedtp:
     post:
       tags:
@@ -373,11 +386,11 @@ paths:
         - "Conversion Operations"
       summary: Convert XML to JSON
       description: >
-        Converts an XML file into JSON format using fast-xml-parser. The API transforms the XML file path internally. 
-        If a "saveTo" parameter is provided (with a .json extension), the converted JSON is saved internally and a download URL is returned; 
-        otherwise, the JSON is returned in the response.
+        Converts an XML file into JSON format using fast-xml-parser. The API transforms the XML file path internally.
+        If a `saveTo` parameter is provided (with a `.json` extension), the converted JSON is saved internally and a download URL is returned.
+        Optionally, set `viaUrl` to save in the download folder; defaults to saving alongside the source file.
       requestBody:
-        description: JSON payload with the XML file path, an optional saveTo filename (with .json extension), and an optional logToConsole flag.
+        description: JSON payload with the XML file path, an optional `saveTo` filename, and optional flags.
         required: true
         content:
           application/json:
@@ -392,12 +405,19 @@ paths:
                 saveTo:
                   type: string
                   description: >
-                    Optional. Desired filename for the converted JSON. If provided, must have a .json extension.
+                    Optional. Desired filename for the converted JSON (must end in `.json`). 
+                    If omitted, defaults to `<original>.json`.
                   example: "A_converted.json"
                 logToConsole:
                   type: boolean
                   description: >
                     Optional. If true, prints the converted JSON to the server console.
+                  example: false
+                viaUrl:
+                  type: boolean
+                  description: >
+                    Optional. If true, saves the converted JSON in the download directory and returns a download URL.
+                    If false (default), saves alongside the source file.
                   example: false
               required:
                 - filePath
@@ -412,15 +432,21 @@ paths:
                   result:
                     type: string
                     description: >
-                      The converted JSON (if "saveTo" is not provided).
+                      The converted JSON (if no file was saved).
                   message:
                     type: string
                     description: >
-                      Confirmation message if the JSON was saved internally.
+                      Confirmation message (if a file was saved).
                   downloadUrl:
                     type: string
                     description: >
-                      URL to download the converted JSON file (if "saveTo" is provided).
+                      URL to download the converted JSON file (if `saveTo` or `viaUrl` was used).
+                  inputFile:
+                    type: string
+                    description: The original XML filename (when saving to disk).
+                  outputFile:
+                    type: string
+                    description: The filename under which the converted JSON was saved.
         '400':
           description: Invalid file path, file not found, or incorrect input/saveTo file extension.
           content:
@@ -447,11 +473,11 @@ paths:
         - "Conversion Operations"
       summary: Convert JSON to XML
       description: >
-        Converts a JSON file into XML format using fast-xml-parser's XMLBuilder. The API transforms the JSON file path internally. 
-        If a "saveTo" parameter is provided (with a .xml extension), the converted XML is saved internally and a download URL is returned; 
-        otherwise, the XML is returned in the response.
+        Converts a JSON file into XML format using fast-xml-parser's XMLBuilder. The API transforms the JSON file path internally.
+        If a `saveTo` parameter is provided (with a `.xml` extension), the converted XML is saved internally and a download URL is returned.
+        Optionally, set `viaUrl` to save in the download folder; defaults to saving alongside the source file.
       requestBody:
-        description: JSON payload with the JSON file path, an optional saveTo filename (with .xml extension), and an optional logToConsole flag.
+        description: JSON payload with the JSON file path, an optional `saveTo` filename, and optional flags.
         required: true
         content:
           application/json:
@@ -466,12 +492,19 @@ paths:
                 saveTo:
                   type: string
                   description: >
-                    Optional. Desired filename for the converted XML. If provided, must have a .xml extension.
+                    Optional. Desired filename for the converted XML (must end in `.xml`). 
+                    If omitted, defaults to `<original>_converted.xml`.
                   example: "A_converted.xml"
                 logToConsole:
                   type: boolean
                   description: >
                     Optional. If true, prints the converted XML to the server console.
+                  example: false
+                viaUrl:
+                  type: boolean
+                  description: >
+                    Optional. If true, saves the converted XML in the download directory and returns a download URL.
+                    If false (default), saves alongside the source file.
                   example: false
               required:
                 - filePath
@@ -486,15 +519,21 @@ paths:
                   result:
                     type: string
                     description: >
-                      The converted XML (if "saveTo" is not provided).
+                      The converted XML (if no file was saved).
                   message:
                     type: string
                     description: >
-                      Confirmation message if the XML was saved internally.
+                      Confirmation message (if a file was saved).
                   downloadUrl:
                     type: string
                     description: >
-                      URL to download the converted XML file (if "saveTo" is provided).
+                      URL to download the converted XML file (if `saveTo` or `viaUrl` was used).
+                  inputFile:
+                    type: string
+                    description: The original JSON filename (when saving to disk).
+                  outputFile:
+                    type: string
+                    description: The filename under which the converted XML was saved.
         '400':
           description: Invalid file path, file not found, or incorrect input/saveTo file extension.
           content:
@@ -654,10 +693,10 @@ paths:
       description: >
         Attempts to format (pretty-print) a JSON file. If the JSON is valid, returns the formatted version.
         If invalid, the API will attempt to repair it using jsonrepair. The API transforms the file path internally.
-        If a "saveTo" parameter is provided (with a .json extension), the corrected JSON is saved internally and a download URL is returned;
-        otherwise, the corrected JSON is returned in the response.
+        If a `saveTo` parameter is provided (with a `.json` extension), the corrected JSON is saved internally and a download URL is returned.
+        Optionally, set `viaUrl` to save in the download folder; defaults to saving alongside the source file.
       requestBody:
-        description: JSON payload with the JSON file path, an optional saveTo filename, and an optional logToConsole flag.
+        description: JSON payload with the JSON file path, an optional `saveTo` filename, and optional flags.
         required: true
         content:
           application/json:
@@ -672,12 +711,19 @@ paths:
                 saveTo:
                   type: string
                   description: >
-                    Optional. Desired filename for the corrected JSON. If provided, must have a .json extension.
+                    Optional. Desired filename for the corrected JSON (must end in `.json`). 
+                    If omitted, defaults to `<original>_formatted.json`.
                   example: "A_corrected.json"
                 logToConsole:
                   type: boolean
                   description: >
                     Optional. If true, prints the corrected JSON to the server console.
+                  example: false
+                viaUrl:
+                  type: boolean
+                  description: >
+                    Optional. If true, saves the corrected JSON in the download directory and returns a download URL.
+                    If false (default), saves alongside the source file.
                   example: false
               required:
                 - filePath
@@ -692,15 +738,21 @@ paths:
                   result:
                     type: string
                     description: >
-                      The corrected JSON (if "saveTo" is not provided).
+                      The corrected JSON (if no file was saved).
                   message:
                     type: string
                     description: >
-                      Confirmation message if the corrected JSON was saved internally.
+                      Confirmation message (if a file was saved).
                   downloadUrl:
                     type: string
                     description: >
-                      URL to download the corrected JSON file (if "saveTo" is provided).
+                      URL to download the corrected JSON file (if `saveTo` or `viaUrl` was used).
+                  inputFile:
+                    type: string
+                    description: The original JSON filename (when saving to disk).
+                  outputFile:
+                    type: string
+                    description: The filename under which the corrected JSON was saved.
         '400':
           description: Invalid file path, incorrect extension, file not found, or unrepaired JSON errors.
           content:
