@@ -1,6 +1,13 @@
 {
-  "version": "4.4.0",
+  "version": "4.5.0",
   "changelog": [
+    {
+      "version": "4.5.0",
+      "date": "2025-08-01",
+      "changes": [
+        "Latest alpine-node image v24"
+      ]
+    },
     {
       "version": "4.4.0",
       "date": "2025-07-18",
